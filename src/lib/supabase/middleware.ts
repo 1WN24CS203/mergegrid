@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function sanitizeSupabaseUrl(url?: string): string {
+  if (!url) return '';
+  return url.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -9,8 +14,11 @@ export async function updateSession(request: NextRequest) {
   const demoSession = request.cookies.get('mergegrid_demo_session')?.value;
   let user = null;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = sanitizeSupabaseUrl(rawUrl);
+  const supabaseKey = (rawKey || '').trim();
+
   const isSupabaseConfigured =
     supabaseUrl &&
     !supabaseUrl.includes('placeholder') &&
