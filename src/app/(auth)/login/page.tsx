@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Github, Sparkles, ArrowRight } from 'lucide-react';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,7 +42,6 @@ export default function LoginPage() {
       });
 
       if (error) {
-        // If placeholder URL or auth failed, offer demo fallback
         toast({
           type: 'error',
           title: 'Authentication notice',
@@ -215,5 +214,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-neutral-400">Loading sign-in...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
