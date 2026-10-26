@@ -5,16 +5,25 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const redirect = searchParams.get('redirect') || '/dashboard';
+  const errorParam = searchParams.get('error_description') || searchParams.get('error');
+
+  if (errorParam) {
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorParam)}`);
+  }
 
   if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    try {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      return NextResponse.redirect(`${origin}${redirect}`);
+      if (!error) {
+        return NextResponse.redirect(`${origin}${redirect}`);
+      }
+      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
+    } catch {
+      return NextResponse.redirect(`${origin}/login?error=auth_failed`);
     }
   }
 
-  // Return to login on error
   return NextResponse.redirect(`${origin}/login?error=auth_failed`);
 }

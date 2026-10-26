@@ -17,8 +17,21 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
+
+  React.useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      toast({
+        type: 'error',
+        title: 'Authentication notice',
+        message:
+          errorParam === 'auth_failed'
+            ? 'GitHub authentication was canceled or not completed.'
+            : decodeURIComponent(errorParam),
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleDemoLogin = () => {
     document.cookie = 'mergegrid_demo_session=alex_dev; path=/; max-age=86400; SameSite=Lax';
@@ -67,17 +80,27 @@ function LoginForm() {
   const handleGitHubLogin = async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${redirectTo}`,
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
         },
       });
+
       if (error) {
-        toast({ type: 'error', title: 'GitHub login failed', message: error.message });
+        const msg = error.message.toLowerCase().includes('not enabled') || error.message.toLowerCase().includes('unsupported')
+          ? 'GitHub provider is not enabled in your Supabase dashboard. Please enable it under Authentication > Providers > GitHub.'
+          : error.message;
+        toast({ type: 'error', title: 'GitHub login failed', message: msg });
+      } else if (data?.url) {
+        window.location.href = data.url;
       }
     } catch {
-      toast({ type: 'error', title: 'GitHub OAuth requires Supabase configuration' });
+      toast({
+        type: 'error',
+        title: 'GitHub OAuth notice',
+        message: 'Could not connect to GitHub OAuth. Check Supabase credentials or use Instant Demo mode.',
+      });
     }
   };
 

@@ -452,7 +452,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="MergeGrid Logo" className="w-7 h-7 object-contain" />
             <span className="font-bold text-white">MergeGrid</span>
-            <span className="text-xs text-neutral-500">© {new Date().getFullYear()} MergeGrid. All rights reserved.</span>
+            <span className="text-xs text-neutral-500">© 2026 MergeGrid. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-neutral-400">
             <Link href="/problems" className="hover:text-white transition-colors">Problems</Link>

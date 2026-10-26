@@ -77,17 +77,23 @@ export default function RegisterPage() {
   const handleGitHubSignUp = async () => {
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard`,
         },
       });
+
       if (error) {
-        toast({ type: 'error', title: 'GitHub sign up failed', message: error.message });
+        const msg = error.message.toLowerCase().includes('not enabled') || error.message.toLowerCase().includes('unsupported')
+          ? 'GitHub provider is not enabled in your Supabase dashboard. Please enable it under Authentication > Providers > GitHub.'
+          : error.message;
+        toast({ type: 'error', title: 'GitHub sign up failed', message: msg });
+      } else if (data?.url) {
+        window.location.href = data.url;
       }
     } catch {
-      toast({ type: 'error', title: 'Something went wrong' });
+      toast({ type: 'error', title: 'Could not connect to GitHub OAuth' });
     }
   };
 
