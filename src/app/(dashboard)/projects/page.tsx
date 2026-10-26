@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import {
   FolderKanban,
   ExternalLink,
-  Github,
   ThumbsUp,
   Plus,
   Search,
   Sparkles,
 } from 'lucide-react';
+import { Github } from '@/components/ui/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

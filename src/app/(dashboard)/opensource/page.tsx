@@ -9,9 +9,9 @@ import {
   Filter,
   CheckCircle,
   Tag,
-  Github,
   Plus,
 } from 'lucide-react';
+import { Github } from '@/components/ui/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
