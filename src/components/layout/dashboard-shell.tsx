@@ -22,8 +22,15 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch {
+      // Ignored if supabase is not connected
+    }
+    // Clear demo session cookie if set
+    document.cookie = 'mergegrid_demo_session=; path=/; max-age=0';
+
     toast({ type: 'info', title: 'Signed out successfully' });
     router.push('/login');
     router.refresh();

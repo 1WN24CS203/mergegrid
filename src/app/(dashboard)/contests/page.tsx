@@ -1,0 +1,215 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Trophy,
+  Calendar,
+  Clock,
+  Users,
+  Award,
+  Sparkles,
+  ArrowRight,
+  Shield,
+  CheckCircle2,
+} from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
+
+interface Contest {
+  id: string;
+  title: string;
+  status: 'live' | 'upcoming' | 'ended';
+  startTime: string;
+  duration: string;
+  registeredCount: number;
+  prizePool: string;
+  difficulty: 'Beginner' | 'Open' | 'Hardcore';
+  description: string;
+}
+
+const contestsData: Contest[] = [
+  {
+    id: 'c-1',
+    title: 'MergeGrid Inter-College Clash #14',
+    status: 'live',
+    startTime: 'Now Live',
+    duration: '2h 00m remaining',
+    registeredCount: 842,
+    prizePool: '₹25,000 + Swag Kits',
+    difficulty: 'Open',
+    description: '4 algorithmic questions testing graphs, DP, and greedy heuristics.',
+  },
+  {
+    id: 'c-2',
+    title: 'Weekend Fast Speedrun #28',
+    status: 'upcoming',
+    startTime: 'Saturday, 8:00 PM IST',
+    duration: '90 Minutes',
+    registeredCount: 1420,
+    prizePool: 'MergeGrid Elite Badges',
+    difficulty: 'Beginner',
+    description: 'Speed-based challenge tailored for 1st & 2nd year students.',
+  },
+  {
+    id: 'c-3',
+    title: 'National Collegiate Grand Finals 2026',
+    status: 'upcoming',
+    startTime: 'Nov 15, 2026',
+    duration: '3h 30m',
+    registeredCount: 3120,
+    prizePool: '₹1,00,000 + Tech Interviews',
+    difficulty: 'Hardcore',
+    description: 'Flagship national competition between premier engineering institutions.',
+  },
+  {
+    id: 'c-4',
+    title: 'MergeGrid Fall Hack & Algorithms #13',
+    status: 'ended',
+    startTime: 'Completed Oct 18',
+    duration: '2 Hours',
+    registeredCount: 960,
+    prizePool: 'Completed',
+    difficulty: 'Open',
+    description: 'Winning team: BMSCE Dev Guild (Score: 400/400).',
+  },
+];
+
+export default function ContestsPage() {
+  const [contests, setContests] = useState(contestsData);
+  const { toast } = useToast();
+
+  const handleRegister = (id: string, title: string) => {
+    toast({
+      type: 'success',
+      title: 'Registration confirmed!',
+      message: `You are now registered for ${title}.`,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+            Contests Arena
+          </h1>
+          <p className="text-sm text-neutral-500 mt-1">
+            Compete live, climb collegiate leaderboard rankings, and earn verified badges.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="success" className="animate-pulse">
+            1 Contest Live Now
+          </Badge>
+        </div>
+      </div>
+
+      {/* Featured Live Banner */}
+      <div className="rounded-2xl p-6 bg-gradient-to-r from-amber-500/10 via-brand-500/10 to-emerald-500/10 border border-amber-300/40 shadow-sm relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-rose-500 animate-ping" />
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-600">
+                Live Contest Active
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">
+              MergeGrid Inter-College Clash #14
+            </h2>
+            <p className="text-sm text-neutral-600 mt-1 max-w-xl">
+              Leaderboard is updating in real time. 4 algorithmic challenges. 842 participants currently submitting code.
+            </p>
+            <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 font-mono">
+              <span className="flex items-center gap-1 font-semibold text-neutral-900">
+                <Clock className="w-3.5 h-3.5 text-amber-600" /> 1h 48m left
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Trophy className="w-3.5 h-3.5 text-amber-600" /> ₹25,000 Pool
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
+              onClick={() => handleRegister('c-1', 'Inter-College Clash #14')}
+            >
+              Enter Contest Arena <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Contest Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {contests.map((contest) => (
+          <Card key={contest.id} className="p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                    contest.status === 'live'
+                      ? 'bg-rose-100 text-rose-700'
+                      : contest.status === 'upcoming'
+                      ? 'bg-brand-100 text-brand-700'
+                      : 'bg-neutral-100 text-neutral-600'
+                  }`}
+                >
+                  {contest.status.toUpperCase()}
+                </span>
+                <span className="text-xs font-medium text-neutral-500">
+                  {contest.difficulty}
+                </span>
+              </div>
+              <h3 className="text-base font-bold text-neutral-900">
+                {contest.title}
+              </h3>
+              <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed">
+                {contest.description}
+              </p>
+              <div className="mt-4 pt-4 border-t border-neutral-100 grid grid-cols-2 gap-2 text-xs text-neutral-600">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>{contest.startTime}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>{contest.duration}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>{contest.registeredCount} Devs</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{contest.prizePool}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-neutral-100 flex items-center justify-between">
+              <span className="text-xs text-neutral-400 font-mono">
+                Official Contest
+              </span>
+              <Button
+                size="sm"
+                variant={contest.status === 'ended' ? 'outline' : 'primary'}
+                onClick={() => handleRegister(contest.id, contest.title)}
+              >
+                {contest.status === 'live'
+                  ? 'Join Now'
+                  : contest.status === 'upcoming'
+                  ? 'Register Free'
+                  : 'View Results'}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

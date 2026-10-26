@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Github } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Github, Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
@@ -18,6 +18,13 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
+
+  const handleDemoLogin = () => {
+    document.cookie = 'mergegrid_demo_session=alex_dev; path=/; max-age=86400; SameSite=Lax';
+    toast({ type: 'success', title: 'Welcome to MergeGrid Demo!', message: 'Signed in as Alex Rivera.' });
+    router.push(redirectTo);
+    router.refresh();
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,14 +42,23 @@ export default function LoginPage() {
       });
 
       if (error) {
-        toast({ type: 'error', title: 'Login failed', message: error.message });
+        // If placeholder URL or auth failed, offer demo fallback
+        toast({
+          type: 'error',
+          title: 'Authentication notice',
+          message: error.message || 'Check your Supabase credentials or use Instant Demo mode below.',
+        });
       } else {
         toast({ type: 'success', title: 'Welcome back!' });
         router.push(redirectTo);
         router.refresh();
       }
     } catch {
-      toast({ type: 'error', title: 'Something went wrong' });
+      toast({
+        type: 'info',
+        title: 'Local / Offline Mode',
+        message: 'No live Supabase connected yet. You can sign in using Instant Demo mode!',
+      });
     } finally {
       setLoading(false);
     }
@@ -61,7 +77,7 @@ export default function LoginPage() {
         toast({ type: 'error', title: 'GitHub login failed', message: error.message });
       }
     } catch {
-      toast({ type: 'error', title: 'Something went wrong' });
+      toast({ type: 'error', title: 'GitHub OAuth requires Supabase configuration' });
     }
   };
 
@@ -70,27 +86,53 @@ export default function LoginPage() {
       {/* Mobile logo */}
       <div className="flex justify-center lg:hidden mb-8">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="MergeGrid" className="w-8 h-8" />
+          <img src="/logo.png" alt="MergeGrid" className="w-8 h-8 object-contain" />
           <span className="text-xl font-bold text-neutral-900">
             Merge<span className="text-brand-600">Grid</span>
           </span>
         </div>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-6">
         <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">
           Welcome back
         </h2>
         <p className="text-sm text-neutral-500 mt-1.5">
-          Sign in to continue to your workspace
+          Sign in to your MergeGrid developer workspace
         </p>
+      </div>
+
+      {/* Demo Sign In Accent Box */}
+      <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-brand-50 to-emerald-50 border border-brand-200/80 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-brand-600 text-white rounded-lg shadow-sm">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-900">
+                Explore in 1-Click
+              </p>
+              <p className="text-xs text-neutral-500">
+                No credentials needed to preview full app
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleDemoLogin}
+            className="bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm"
+          >
+            Enter Demo <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          </Button>
+        </div>
       </div>
 
       {/* GitHub OAuth */}
       <Button
         variant="outline"
         size="lg"
-        className="w-full mb-6"
+        className="w-full mb-6 border-neutral-300 hover:bg-neutral-50"
         onClick={handleGitHubLogin}
         icon={<Github className="w-4 h-4" />}
       >
@@ -113,7 +155,7 @@ export default function LoginPage() {
         <Input
           label="Email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="you@college.edu"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           icon={<Mail className="w-4 h-4" />}
@@ -145,6 +187,7 @@ export default function LoginPage() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
+              defaultChecked
               className="w-3.5 h-3.5 rounded border-neutral-300 text-brand-600 focus:ring-brand-500"
             />
             <span className="text-xs text-neutral-600">Remember me</span>
@@ -166,7 +209,7 @@ export default function LoginPage() {
         Don&apos;t have an account?{' '}
         <Link
           href="/register"
-          className="text-brand-600 hover:text-brand-700 font-medium transition-colors"
+          className="text-brand-600 hover:text-brand-700 font-semibold transition-colors"
         >
           Create account
         </Link>
