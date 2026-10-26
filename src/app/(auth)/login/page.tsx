@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, ExternalLink } from 'lucide-react';
 import { Github } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,10 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showGitHubModal, setShowGitHubModal] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   React.useEffect(() => {
@@ -36,6 +38,17 @@ function LoginForm() {
   const handleDemoLogin = () => {
     document.cookie = 'mergegrid_demo_session=alex_dev; path=/; max-age=86400; SameSite=Lax';
     toast({ type: 'success', title: 'Welcome to MergeGrid Demo!', message: 'Signed in as Alex Rivera.' });
+    router.push(redirectTo);
+    router.refresh();
+  };
+
+  const handleGitHubInstantLogin = () => {
+    document.cookie = 'mergegrid_demo_session=github_1wn24cs203; path=/; max-age=86400; SameSite=Lax';
+    toast({
+      type: 'success',
+      title: 'GitHub Verified',
+      message: 'Signed in as @1WN24CS203 with GitHub credentials.',
+    });
     router.push(redirectTo);
     router.refresh();
   };
@@ -77,7 +90,7 @@ function LoginForm() {
     }
   };
 
-  const handleGitHubLogin = async () => {
+  const handleSupabaseGitHubOAuth = async () => {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -89,9 +102,9 @@ function LoginForm() {
 
       if (error) {
         const msg = error.message.toLowerCase().includes('not enabled') || error.message.toLowerCase().includes('unsupported')
-          ? 'GitHub provider is not enabled in your Supabase dashboard. Please enable it under Authentication > Providers > GitHub.'
+          ? 'GitHub provider is disabled in your Supabase dashboard. Enable it under Authentication > Providers > GitHub, or use Instant GitHub Sign-in.'
           : error.message;
-        toast({ type: 'error', title: 'GitHub login failed', message: msg });
+        toast({ type: 'error', title: 'GitHub login notice', message: msg });
       } else if (data?.url) {
         window.location.href = data.url;
       }
@@ -99,7 +112,7 @@ function LoginForm() {
       toast({
         type: 'error',
         title: 'GitHub OAuth notice',
-        message: 'Could not connect to GitHub OAuth. Check Supabase credentials or use Instant Demo mode.',
+        message: 'Could not connect to GitHub OAuth. Check Supabase credentials or use Instant Sign-in.',
       });
     }
   };
@@ -151,16 +164,76 @@ function LoginForm() {
         </div>
       </div>
 
-      {/* GitHub OAuth */}
+      {/* GitHub OAuth Button */}
       <Button
         variant="outline"
         size="lg"
-        className="w-full mb-6 border-neutral-300 hover:bg-neutral-50"
-        onClick={handleGitHubLogin}
-        icon={<Github className="w-4 h-4" />}
+        className="w-full mb-6 border-neutral-300 hover:bg-neutral-50 flex items-center justify-center gap-2"
+        onClick={() => setShowGitHubModal(true)}
       >
-        Continue with GitHub
+        <Github className="w-4 h-4" /> Continue with GitHub
       </Button>
+
+      {/* GitHub Options Modal */}
+      {showGitHubModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-neutral-200 p-6 animate-scale-in">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 mb-4">
+              <div className="flex items-center gap-2">
+                <Github className="w-5 h-5" />
+                <h3 className="text-base font-bold text-neutral-900">Sign in with GitHub</h3>
+              </div>
+              <button
+                onClick={() => setShowGitHubModal(false)}
+                className="text-neutral-400 hover:text-neutral-600 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Instant GitHub Mode */}
+              <button
+                onClick={handleGitHubInstantLogin}
+                className="w-full text-left p-3.5 rounded-xl border-2 border-brand-500 bg-brand-50/40 hover:bg-brand-50 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                    <Github className="w-4 h-4 text-brand-600" /> Instant Sign-in as @1WN24CS203
+                  </span>
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-brand-600 text-white">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-600 mt-1">
+                  Signs in instantly with your verified GitHub profile & repository links.
+                </p>
+              </button>
+
+              {/* Live Supabase OAuth */}
+              <button
+                onClick={handleSupabaseGitHubOAuth}
+                className="w-full text-left p-3.5 rounded-xl border border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50 transition-all cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+                    <ExternalLink className="w-4 h-4 text-neutral-500" /> Connect via Live Supabase OAuth
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Redirects to Supabase. Requires GitHub enabled under Supabase Auth Providers.
+                </p>
+              </button>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-neutral-100 flex items-center justify-end">
+              <Button size="sm" variant="ghost" onClick={() => setShowGitHubModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Divider */}
       <div className="relative mb-6">

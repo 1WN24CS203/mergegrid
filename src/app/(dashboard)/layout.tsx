@@ -55,6 +55,13 @@ export default async function DashboardLayout({
         avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
         email: user.email || '',
       }
+    : demoCookie?.startsWith('github')
+    ? {
+        display_name: '1WN24CS203 (GitHub)',
+        username: '1WN24CS203',
+        avatar_url: 'https://github.com/1WN24CS203.png',
+        email: 'prathyushjain.cs24@bmsce.ac.in',
+      }
     : {
         display_name: 'Alex Rivera (Demo)',
         username: 'alex_dev',
