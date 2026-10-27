@@ -46,7 +46,7 @@ export default async function DashboardPage() {
     if (demoCookie.startsWith('github')) {
       displayName = '1WN24CS203';
     } else {
-      displayName = 'Alex Rivera';
+      displayName = 'Developer';
     }
   }
 

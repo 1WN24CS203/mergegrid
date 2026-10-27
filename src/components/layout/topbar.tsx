@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Menu, Search, Bell } from 'lucide-react';
 import { useSidebar } from './sidebar';
-import { cn } from '@/lib/utils';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Home',
@@ -23,10 +23,19 @@ const pageTitles: Record<string, string> = {
 export function Topbar() {
   const { setMobileOpen } = useSidebar();
   const pathname = usePathname();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const title = Object.entries(pageTitles).find(([path]) =>
-    pathname.startsWith(path)
-  )?.[1] || 'MergeGrid';
+  const title =
+    Object.entries(pageTitles).find(([path]) => pathname.startsWith(path))?.[1] ||
+    'MergeGrid';
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/problems?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <header className="h-14 shrink-0 bg-white border-b border-neutral-200 flex items-center gap-3 px-4 sm:px-6">
@@ -34,6 +43,7 @@ export function Topbar() {
       <button
         onClick={() => setMobileOpen(true)}
         className="lg:hidden text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer"
+        aria-label="Toggle Navigation Menu"
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -45,23 +55,32 @@ export function Topbar() {
       <div className="flex-1" />
 
       {/* Search */}
-      <div className="hidden sm:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 h-8 w-64 hover:bg-neutral-150 transition-colors cursor-text group">
+      <form
+        onSubmit={handleSearch}
+        className="hidden sm:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 h-8 w-64 hover:bg-neutral-150 transition-colors group"
+      >
         <Search className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-500" />
         <input
           type="text"
-          placeholder="Search anything..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search problems, topics..."
           className="bg-transparent text-sm text-neutral-700 placeholder-neutral-400 outline-none w-full"
         />
         <kbd className="hidden md:inline-flex text-[10px] text-neutral-400 bg-white border border-neutral-200 rounded px-1.5 py-0.5 font-mono">
-          ⌘K
+          ↵
         </kbd>
-      </div>
+      </form>
 
-      {/* Notifications bell (mobile-visible) */}
-      <button className="relative text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer">
+      {/* Notifications bell */}
+      <Link
+        href="/notifications"
+        className="relative text-neutral-500 hover:text-neutral-700 transition-colors p-1.5 rounded-lg hover:bg-neutral-100"
+        title="View Notifications"
+      >
         <Bell className="w-5 h-5" />
-        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-600 rounded-full" />
-      </button>
+        <span className="absolute top-1 right-1 w-2 h-2 bg-brand-600 rounded-full" />
+      </Link>
     </header>
   );
 }

@@ -18,16 +18,43 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 
 export default function SettingsPage() {
-  const [displayName, setDisplayName] = useState('Alex Rivera');
-  const [username, setUsername] = useState('alex_dev');
+  const [displayName, setDisplayName] = useState('Developer');
+  const [username, setUsername] = useState('developer');
   const [college, setCollege] = useState('BMS College of Engineering (BMSCE)');
-  const [bio, setBio] = useState('Pre-final year CS student building distributed systems and open-source tooling.');
+  const [bio, setBio] = useState('Student engineer building distributed systems, open source, and algorithmic solutions.');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [contestReminders, setContestReminders] = useState(true);
   const { toast } = useToast();
 
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mergegrid_user_profile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.displayName) setDisplayName(parsed.displayName);
+        if (parsed.username) setUsername(parsed.username);
+        if (parsed.college) setCollege(parsed.college);
+        if (parsed.bio) setBio(parsed.bio);
+      } else if (typeof document !== 'undefined' && document.cookie.includes('github')) {
+        setDisplayName('1WN24CS203');
+        setUsername('1WN24CS203');
+        setBio('BMSCE Developer Guild member building open-source platforms and systems on MergeGrid.');
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      localStorage.setItem(
+        'mergegrid_user_profile',
+        JSON.stringify({ displayName, username, college, bio, emailAlerts, contestReminders })
+      );
+    } catch {
+      // Ignore
+    }
     toast({
       type: 'success',
       title: 'Preferences saved',

@@ -22,16 +22,36 @@ import { createClient } from '@/lib/supabase/client';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState({
-    displayName: 'Alex Rivera',
-    username: 'alex_dev',
+    displayName: 'Developer',
+    username: 'developer',
     avatarUrl: null as string | null,
     college: 'BMS College of Engineering (BMSCE)',
-    bio: 'Pre-final year Computer Science student. Building distributed systems, open-source dev tooling, and competing in algorithmic clashes. Working with Next.js, Go, and PostgreSQL.',
+    bio: 'Student engineer building distributed systems, open-source dev tooling, and competing in algorithmic clashes.',
     skills: ['TypeScript', 'Next.js', 'Go', 'Docker', 'PostgreSQL', 'TailwindCSS'],
-    githubUrl: 'https://github.com',
+    githubUrl: 'https://github.com/1WN24CS203/mergegrid',
   });
+  const [solvedCount, setSolvedCount] = useState(0);
 
   useEffect(() => {
+    // Load solved count from localStorage
+    try {
+      const savedSolved = localStorage.getItem('mergegrid_solved_problems');
+      if (savedSolved) {
+        const parsed = JSON.parse(savedSolved);
+        if (Array.isArray(parsed)) setSolvedCount(parsed.length);
+      }
+      const savedProfile = localStorage.getItem('mergegrid_user_profile');
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
+        if (p.displayName) setProfile((prev) => ({ ...prev, displayName: p.displayName }));
+        if (p.username) setProfile((prev) => ({ ...prev, username: p.username }));
+        if (p.college) setProfile((prev) => ({ ...prev, college: p.college }));
+        if (p.bio) setProfile((prev) => ({ ...prev, bio: p.bio }));
+      }
+    } catch {
+      // Ignore
+    }
+
     async function loadUser() {
       // Check cookies for demo mode first
       const cookies = document.cookie;
@@ -41,7 +61,7 @@ export default function ProfilePage() {
           displayName: '1WN24CS203',
           username: '1WN24CS203',
           avatarUrl: 'https://github.com/1WN24CS203.png',
-          githubUrl: 'https://github.com/1WN24CS203',
+          githubUrl: 'https://github.com/1WN24CS203/mergegrid',
           bio: 'BMSCE Developer Guild member building open-source platforms and systems on MergeGrid.',
         }));
       }
@@ -186,14 +206,12 @@ export default function ProfilePage() {
               <Github className="w-3.5 h-3.5" /> GitHub Profile
             </a>
             <span className="text-neutral-300">•</span>
-            <a
-              href="https://example.com"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1 text-neutral-600 hover:text-neutral-900 font-medium"
+            <Link
+              href="/settings"
+              className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
             >
-              <Globe className="w-3.5 h-3.5" /> Portfolio
-            </a>
+              <Globe className="w-3.5 h-3.5" /> Edit Workspace
+            </Link>
           </div>
         </div>
       </Card>
@@ -202,23 +220,23 @@ export default function ProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-xs font-medium text-neutral-500">Solved Problems</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-1">184</p>
-          <p className="text-xs text-brand-600 mt-1 font-semibold">Top 5% of BMSCE</p>
+          <p className="text-2xl font-bold text-neutral-900 mt-1">{solvedCount}</p>
+          <p className="text-xs text-brand-600 mt-1 font-semibold">{solvedCount > 0 ? 'Active Solver' : 'Ready to solve'}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs font-medium text-neutral-500">Reputation Points</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">2,850</p>
-          <p className="text-xs text-neutral-400 mt-1">Rank #4 Campus-wide</p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">{100 + solvedCount * 50}</p>
+          <p className="text-xs text-neutral-400 mt-1">Starting level</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs font-medium text-neutral-500">Daily Streak</p>
-          <p className="text-2xl font-bold text-rose-600 mt-1">🔥 14 Days</p>
-          <p className="text-xs text-neutral-400 mt-1">Best: 24 Days</p>
+          <p className="text-2xl font-bold text-rose-600 mt-1">🔥 1 Day</p>
+          <p className="text-xs text-neutral-400 mt-1">Active streak</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-medium text-neutral-500">OSS Merged PRs</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">9 PRs</p>
-          <p className="text-xs text-neutral-400 mt-1">Across 4 Repos</p>
+          <p className="text-xs font-medium text-neutral-500">OSS Contributions</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">1 Repo</p>
+          <p className="text-xs text-neutral-400 mt-1">MergeGrid</p>
         </Card>
       </div>
 

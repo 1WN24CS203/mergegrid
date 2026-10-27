@@ -33,6 +33,7 @@ interface UserRank {
   reputation: number;
   streak: number;
   problems: number;
+  isCurrentUser?: boolean;
 }
 
 const collegesData: CollegeRank[] = [
@@ -44,17 +45,50 @@ const collegesData: CollegeRank[] = [
   { rank: 6, college: 'NIT Karnataka (NITK Surathkal)', points: 35100, activeStudents: 180, problemsSolved: 1750, weeklyGrowth: '+11.0%' },
 ];
 
-const usersData: UserRank[] = [
-  { rank: 1, name: 'Siddharth Rao', username: 'sid_algorithms', college: 'BMSCE', reputation: 4210, streak: 48, problems: 342 },
-  { rank: 2, name: 'Ananya Deshmukh', username: 'ananya_codes', college: 'RVCE', reputation: 3980, streak: 32, problems: 318 },
-  { rank: 3, name: 'Rohan Mehra', username: 'rohan_m', college: 'IIT Bombay', reputation: 3840, streak: 27, problems: 295 },
-  { rank: 4, name: 'Alex Rivera (You)', username: 'alex_dev', college: 'BMSCE', reputation: 2850, streak: 14, problems: 184 },
-  { rank: 5, name: 'Kavya V', username: 'kavya_builds', college: 'PES University', reputation: 2710, streak: 19, problems: 172 },
-];
-
 export default function LeaderboardPage() {
   const [tab, setTab] = useState<'colleges' | 'individuals'>('colleges');
   const [search, setSearch] = useState('');
+  const [currentUsername, setCurrentUsername] = useState('developer');
+  const [currentDisplayName, setCurrentDisplayName] = useState('Developer');
+  const [solvedCount, setSolvedCount] = useState(0);
+
+  React.useEffect(() => {
+    try {
+      const savedSolved = localStorage.getItem('mergegrid_solved_problems');
+      if (savedSolved) {
+        const parsed = JSON.parse(savedSolved);
+        if (Array.isArray(parsed)) setSolvedCount(parsed.length);
+      }
+      const savedProfile = localStorage.getItem('mergegrid_user_profile');
+      if (savedProfile) {
+        const p = JSON.parse(savedProfile);
+        if (p.displayName) setCurrentDisplayName(p.displayName);
+        if (p.username) setCurrentUsername(p.username);
+      } else if (typeof document !== 'undefined' && document.cookie.includes('github')) {
+        setCurrentDisplayName('1WN24CS203');
+        setCurrentUsername('1WN24CS203');
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const usersData: UserRank[] = [
+    { rank: 1, name: 'Siddharth Rao', username: 'sid_algorithms', college: 'BMSCE', reputation: 4210, streak: 48, problems: 342 },
+    { rank: 2, name: 'Ananya Deshmukh', username: 'ananya_codes', college: 'RVCE', reputation: 3980, streak: 32, problems: 318 },
+    { rank: 3, name: 'Rohan Mehra', username: 'rohan_m', college: 'IIT Bombay', reputation: 3840, streak: 27, problems: 295 },
+    {
+      rank: 4,
+      name: `${currentDisplayName} (You)`,
+      username: currentUsername,
+      college: 'BMSCE',
+      reputation: 100 + solvedCount * 50,
+      streak: 1,
+      problems: solvedCount,
+      isCurrentUser: true,
+    },
+    { rank: 5, name: 'Kavya V', username: 'kavya_builds', college: 'PES University', reputation: 2710, streak: 19, problems: 172 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -207,7 +241,7 @@ export default function LeaderboardPage() {
                   <tr
                     key={usr.rank}
                     className={`hover:bg-neutral-50/70 transition-colors ${
-                      usr.username === 'alex_dev' ? 'bg-brand-50/40 font-semibold' : ''
+                      usr.isCurrentUser ? 'bg-brand-50/40 font-semibold' : ''
                     }`}
                   >
                     <td className="py-3.5 px-4 text-center font-bold font-mono text-neutral-700">

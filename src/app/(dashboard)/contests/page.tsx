@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Trophy,
   Calendar,
@@ -27,6 +29,7 @@ interface Contest {
   prizePool: string;
   difficulty: 'Beginner' | 'Open' | 'Hardcore';
   description: string;
+  registered?: boolean;
 }
 
 const contestsData: Contest[] = [
@@ -78,14 +81,62 @@ const contestsData: Contest[] = [
 
 export default function ContestsPage() {
   const [contests, setContests] = useState(contestsData);
+  const router = useRouter();
   const { toast } = useToast();
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mergegrid_registered_contests');
+      if (saved) {
+        const registeredIds: string[] = JSON.parse(saved);
+        setContests((prev) =>
+          prev.map((c) => ({
+            ...c,
+            registered: registeredIds.includes(c.id),
+          }))
+        );
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   const handleRegister = (id: string, title: string) => {
-    toast({
-      type: 'success',
-      title: 'Registration confirmed!',
-      message: `You are now registered for ${title}.`,
+    const updated = contests.map((c) => {
+      if (c.id === id) {
+        const isNowRegistered = !c.registered;
+        return {
+          ...c,
+          registered: isNowRegistered,
+          registeredCount: isNowRegistered ? c.registeredCount + 1 : c.registeredCount - 1,
+        };
+      }
+      return c;
     });
+
+    setContests(updated);
+
+    try {
+      const registeredIds = updated.filter((c) => c.registered).map((c) => c.id);
+      localStorage.setItem('mergegrid_registered_contests', JSON.stringify(registeredIds));
+    } catch {
+      // Ignore
+    }
+
+    const targetContest = updated.find((c) => c.id === id);
+    if (targetContest?.registered) {
+      toast({
+        type: 'success',
+        title: 'Registration confirmed!',
+        message: `You are registered for ${title}.`,
+      });
+    } else {
+      toast({
+        type: 'info',
+        title: 'Registration cancelled',
+        message: `You have unregistered from ${title}.`,
+      });
+    }
   };
 
   return (
@@ -134,12 +185,13 @@ export default function ContestsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
-              onClick={() => handleRegister('c-1', 'Inter-College Clash #14')}
-            >
-              Enter Contest Arena <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+            <Link href="/problems">
+              <Button
+                className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
+              >
+                Enter Contest Arena <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -195,17 +247,28 @@ export default function ContestsPage() {
               <span className="text-xs text-neutral-400 font-mono">
                 Official Contest
               </span>
-              <Button
-                size="sm"
-                variant={contest.status === 'ended' ? 'outline' : 'primary'}
-                onClick={() => handleRegister(contest.id, contest.title)}
-              >
-                {contest.status === 'live'
-                  ? 'Join Now'
-                  : contest.status === 'upcoming'
-                  ? 'Register Free'
-                  : 'View Results'}
-              </Button>
+              {contest.status === 'live' ? (
+                <Link href="/problems">
+                  <Button size="sm" className="bg-brand-600 hover:bg-brand-700 text-white">
+                    Join Arena
+                  </Button>
+                </Link>
+              ) : contest.status === 'upcoming' ? (
+                <Button
+                  size="sm"
+                  variant={contest.registered ? 'outline' : 'primary'}
+                  className={contest.registered ? 'text-emerald-700 border-emerald-300 bg-emerald-50' : ''}
+                  onClick={() => handleRegister(contest.id, contest.title)}
+                >
+                  {contest.registered ? 'Registered ✓' : 'Register Free'}
+                </Button>
+              ) : (
+                <Link href="/leaderboard">
+                  <Button size="sm" variant="outline">
+                    View Results
+                  </Button>
+                </Link>
+              )}
             </div>
           </Card>
         ))}

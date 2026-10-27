@@ -75,10 +75,10 @@ export default async function DashboardLayout({
         email: 'prathyushjain.cs24@bmsce.ac.in',
       }
     : {
-        display_name: 'Alex Rivera (Demo)',
-        username: 'alex_dev',
+        display_name: 'Developer',
+        username: 'developer',
         avatar_url: null,
-        email: 'alex@mergegrid.dev',
+        email: 'developer@mergegrid.dev',
       };
 
   return <DashboardShell user={userData}>{children}</DashboardShell>;

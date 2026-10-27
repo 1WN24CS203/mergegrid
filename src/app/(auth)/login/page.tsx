@@ -36,8 +36,8 @@ function LoginForm() {
   }, [searchParams, toast]);
 
   const handleDemoLogin = () => {
-    document.cookie = 'mergegrid_demo_session=alex_dev; path=/; max-age=86400; SameSite=Lax';
-    toast({ type: 'success', title: 'Welcome to MergeGrid Demo!', message: 'Signed in as Alex Rivera.' });
+    document.cookie = 'mergegrid_demo_session=developer; path=/; max-age=86400; SameSite=Lax';
+    toast({ type: 'success', title: 'Welcome to MergeGrid!', message: 'Signed in as Developer.' });
     router.push(redirectTo);
     router.refresh();
   };

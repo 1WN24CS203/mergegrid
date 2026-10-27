@@ -15,6 +15,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 
 interface CompanyArchive {
   id: string;
@@ -93,41 +94,53 @@ export default function PlacementsPage() {
 
       {/* Quick Prep Tracks */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 bg-gradient-to-br from-brand-50 to-white border-brand-200/80">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-brand-600 text-white">
-              <FileText className="w-4 h-4" />
+        <Link href="/problems?search=Arrays" className="group">
+          <Card className="p-4 bg-gradient-to-br from-brand-50 to-white border-brand-200/80 group-hover:border-brand-400 group-hover:shadow-sm transition-all h-full">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-brand-600 text-white">
+                <FileText className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-neutral-900 text-sm group-hover:text-brand-600 transition-colors">
+                Blind 75 & Grind 169
+              </h3>
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm">Blind 75 & Grind 169</h3>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Hand-picked optimal collection of must-do algorithmic patterns.
-          </p>
-        </Card>
+            <p className="text-xs text-neutral-500">
+              Hand-picked optimal collection of must-do algorithmic patterns.
+            </p>
+          </Card>
+        </Link>
 
-        <Card className="p-4 bg-gradient-to-br from-cyan-50 to-white border-cyan-200/80">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-cyan-600 text-white">
-              <BookOpen className="w-4 h-4" />
+        <Link href="/problems?search=Stacks" className="group">
+          <Card className="p-4 bg-gradient-to-br from-cyan-50 to-white border-cyan-200/80 group-hover:border-cyan-400 group-hover:shadow-sm transition-all h-full">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-cyan-600 text-white">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-neutral-900 text-sm group-hover:text-cyan-600 transition-colors">
+                OS & DBMS Essentials
+              </h3>
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm">OS & DBMS Essentials</h3>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Indexing, ACID transactions, paging, deadlocks, and virtual memory.
-          </p>
-        </Card>
+            <p className="text-xs text-neutral-500">
+              Indexing, ACID transactions, paging, deadlocks, and virtual memory.
+            </p>
+          </Card>
+        </Link>
 
-        <Card className="p-4 bg-gradient-to-br from-purple-50 to-white border-purple-200/80">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-purple-600 text-white">
-              <Sparkles className="w-4 h-4" />
+        <Link href="/problems?search=Dynamic" className="group">
+          <Card className="p-4 bg-gradient-to-br from-purple-50 to-white border-purple-200/80 group-hover:border-purple-400 group-hover:shadow-sm transition-all h-full">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-purple-600 text-white">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-neutral-900 text-sm group-hover:text-purple-600 transition-colors">
+                System Design Primers
+              </h3>
             </div>
-            <h3 className="font-bold text-neutral-900 text-sm">System Design Primers</h3>
-          </div>
-          <p className="text-xs text-neutral-500">
-            Designing URL shorteners, news feeds, WhatsApp chat architecture.
-          </p>
-        </Card>
+            <p className="text-xs text-neutral-500">
+              Designing URL shorteners, news feeds, WhatsApp chat architecture.
+            </p>
+          </Card>
+        </Link>
       </div>
 
       {/* Search */}
@@ -189,9 +202,11 @@ export default function PlacementsPage() {
                     }}
                   />
                 </div>
-                <Button size="sm" variant="outline">
-                  Practice Set <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                </Button>
+                <Link href={`/problems?search=${encodeURIComponent(company.name)}`}>
+                  <Button size="sm" variant="outline" className="hover:border-brand-500 hover:text-brand-600">
+                    Practice Set <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </Link>
               </div>
             </div>
           </Card>

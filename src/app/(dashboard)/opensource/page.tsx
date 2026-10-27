@@ -1,20 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   GitFork,
   Star,
   ExternalLink,
   Search,
-  Filter,
-  CheckCircle,
-  Tag,
   Plus,
 } from 'lucide-react';
 import { Github } from '@/components/ui/icons';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/toast';
 
 interface Repo {
   id: string;
@@ -30,66 +28,83 @@ interface Repo {
   githubUrl: string;
 }
 
-const repositoriesData: Repo[] = [
+const defaultRepos: Repo[] = [
   {
     id: 'r-1',
-    name: 'MergeGrid-Core',
-    owner: 'mergegrid',
-    description: 'The distributed judge engine and contest scoring microservice for MergeGrid.',
-    stars: 348,
-    forks: 72,
-    openIssues: 18,
+    name: 'mergegrid',
+    owner: '1WN24CS203',
+    description: 'The all-in-one developer collaboration & competition platform built with Next.js & Supabase.',
+    stars: 1,
+    forks: 0,
+    openIssues: 0,
     language: 'TypeScript',
-    topics: ['JudgeEngine', 'NextJS', 'Supabase', 'Docker'],
-    goodFirstIssues: 5,
-    githubUrl: 'https://github.com',
-  },
-  {
-    id: 'r-2',
-    name: 'campus-interview-vault',
-    owner: 'bmsce-foss',
-    description: 'Community-driven open repository of verified campus interview problems and company blueprints.',
-    stars: 182,
-    forks: 41,
-    openIssues: 12,
-    language: 'Python',
-    topics: ['DSA', 'LeetCode-Solutions', 'Interviews'],
-    goodFirstIssues: 4,
-    githubUrl: 'https://github.com',
-  },
-  {
-    id: 'r-3',
-    name: 'dev-resume-parser-wasm',
-    owner: 'rvce-devs',
-    description: 'High-speed client-side resume ATS keyword evaluator running completely in WebAssembly.',
-    stars: 215,
-    forks: 36,
-    openIssues: 8,
-    language: 'Rust',
-    topics: ['WebAssembly', 'ATS', 'Rust', 'PDF'],
-    goodFirstIssues: 3,
-    githubUrl: 'https://github.com',
-  },
-  {
-    id: 'r-4',
-    name: 'algo-visualizer-react',
-    owner: 'iitb-acm',
-    description: 'Visual step-by-step debugger for sorting, graph traversals, and dynamic programming tables.',
-    stars: 490,
-    forks: 110,
-    openIssues: 24,
-    language: 'TypeScript',
-    topics: ['Algorithms', 'Canvas', 'React', 'Education'],
-    goodFirstIssues: 8,
-    githubUrl: 'https://github.com',
+    topics: ['NextJS', 'Supabase', 'Tailwind', 'Competitive-Coding'],
+    goodFirstIssues: 0,
+    githubUrl: 'https://github.com/1WN24CS203/mergegrid',
   },
 ];
 
 export default function OpenSourcePage() {
+  const [repos, setRepos] = useState<Repo[]>(defaultRepos);
   const [search, setSearch] = useState('');
   const [selectedLang, setSelectedLang] = useState('All');
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [repoName, setRepoName] = useState('');
+  const [repoOwner, setRepoOwner] = useState('');
+  const [repoDesc, setRepoDesc] = useState('');
+  const [repoLang, setRepoLang] = useState('TypeScript');
+  const [repoUrl, setRepoUrl] = useState('');
+  const { toast } = useToast();
 
-  const filtered = repositoriesData.filter((r) => {
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mergegrid_repos');
+      if (saved) {
+        setRepos(JSON.parse(saved));
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const handleAddRepo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!repoName.trim() || !repoUrl.trim()) {
+      toast({ type: 'error', title: 'Please provide repository name and URL' });
+      return;
+    }
+
+    const newRepo: Repo = {
+      id: `r-${Date.now()}`,
+      name: repoName.trim(),
+      owner: repoOwner.trim() || 'developer',
+      description: repoDesc.trim() || 'Open source developer project seeking contributors.',
+      stars: 1,
+      forks: 0,
+      openIssues: 1,
+      language: repoLang,
+      topics: [repoLang, 'OpenSource'],
+      goodFirstIssues: 1,
+      githubUrl: repoUrl.trim(),
+    };
+
+    const updated = [newRepo, ...repos];
+    setRepos(updated);
+    try {
+      localStorage.setItem('mergegrid_repos', JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+
+    setRepoName('');
+    setRepoOwner('');
+    setRepoDesc('');
+    setRepoUrl('');
+    setShowSubmitModal(false);
+    toast({ type: 'success', title: 'Repository submitted to radar!' });
+  };
+
+  const filtered = repos.filter((r) => {
     const matchesSearch =
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.description.toLowerCase().includes(search.toLowerCase());
@@ -111,7 +126,8 @@ export default function OpenSourcePage() {
         </div>
         <Button
           icon={<Github className="w-4 h-4" />}
-          className="bg-neutral-900 hover:bg-neutral-800 text-white"
+          className="bg-neutral-900 hover:bg-neutral-800 text-white cursor-pointer"
+          onClick={() => setShowSubmitModal(true)}
         >
           Submit Repository
         </Button>
@@ -128,11 +144,11 @@ export default function OpenSourcePage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          {['All', 'TypeScript', 'Python', 'Rust'].map((lang) => (
+          {['All', 'TypeScript', 'Python', 'Go', 'Rust'].map((lang) => (
             <button
               key={lang}
               onClick={() => setSelectedLang(lang)}
-              className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 selectedLang === lang
                   ? 'bg-neutral-900 text-white shadow-sm'
                   : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -200,6 +216,100 @@ export default function OpenSourcePage() {
           </Card>
         ))}
       </div>
+
+      {/* Submit Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full border border-neutral-200 p-6 animate-scale-in">
+            <h3 className="text-lg font-bold text-neutral-900 mb-4">
+              Submit Open Source Repository
+            </h3>
+            <form onSubmit={handleAddRepo} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                    Owner / Organization
+                  </label>
+                  <Input
+                    placeholder="e.g. 1WN24CS203"
+                    value={repoOwner}
+                    onChange={(e) => setRepoOwner(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                    Repository Name
+                  </label>
+                  <Input
+                    placeholder="e.g. mergegrid"
+                    value={repoName}
+                    onChange={(e) => setRepoName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Explain what the repository does..."
+                  value={repoDesc}
+                  onChange={(e) => setRepoDesc(e.target.value)}
+                  className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                    Primary Language
+                  </label>
+                  <select
+                    value={repoLang}
+                    onChange={(e) => setRepoLang(e.target.value)}
+                    className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 bg-white text-neutral-800"
+                  >
+                    <option value="TypeScript">TypeScript</option>
+                    <option value="Python">Python</option>
+                    <option value="Go">Go</option>
+                    <option value="Rust">Rust</option>
+                    <option value="JavaScript">JavaScript</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
+                    GitHub URL
+                  </label>
+                  <Input
+                    placeholder="https://github.com/..."
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowSubmitModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white font-medium">
+                  Submit to Radar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
