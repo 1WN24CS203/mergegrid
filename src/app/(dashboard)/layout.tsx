@@ -47,12 +47,24 @@ export default async function DashboardLayout({
     ? {
         display_name:
           profile?.display_name ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
           user.user_metadata?.display_name ||
+          user.user_metadata?.user_name ||
+          user.user_metadata?.preferred_username ||
           user.email?.split('@')[0] ||
           'Developer',
         username:
-          profile?.username || user.email?.split('@')[0] || 'developer',
-        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
+          profile?.username ||
+          user.user_metadata?.user_name ||
+          user.user_metadata?.preferred_username ||
+          user.email?.split('@')[0] ||
+          'developer',
+        avatar_url:
+          profile?.avatar_url ||
+          user.user_metadata?.avatar_url ||
+          user.user_metadata?.picture ||
+          null,
         email: user.email || '',
       }
     : demoCookie?.startsWith('github')

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Flame,
   Target,
@@ -29,9 +29,14 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ displayName }: DashboardContentProps) {
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const [greeting, setGreeting] = useState('Welcome back');
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(
+      hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+    );
+  }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">

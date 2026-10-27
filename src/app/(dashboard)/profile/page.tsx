@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Globe,
@@ -18,8 +18,95 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ProfilePage() {
+  const [profile, setProfile] = useState({
+    displayName: 'Alex Rivera',
+    username: 'alex_dev',
+    avatarUrl: null as string | null,
+    college: 'BMS College of Engineering (BMSCE)',
+    bio: 'Pre-final year Computer Science student. Building distributed systems, open-source dev tooling, and competing in algorithmic clashes. Working with Next.js, Go, and PostgreSQL.',
+    skills: ['TypeScript', 'Next.js', 'Go', 'Docker', 'PostgreSQL', 'TailwindCSS'],
+    githubUrl: 'https://github.com',
+  });
+
+  useEffect(() => {
+    async function loadUser() {
+      // Check cookies for demo mode first
+      const cookies = document.cookie;
+      if (cookies.includes('mergegrid_demo_session=github')) {
+        setProfile((prev) => ({
+          ...prev,
+          displayName: '1WN24CS203',
+          username: '1WN24CS203',
+          avatarUrl: 'https://github.com/1WN24CS203.png',
+          githubUrl: 'https://github.com/1WN24CS203',
+          bio: 'BMSCE Developer Guild member building open-source platforms and systems on MergeGrid.',
+        }));
+      }
+
+      // Check live Supabase
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: dbProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          const name =
+            dbProfile?.display_name ||
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.user_metadata?.display_name ||
+            user.user_metadata?.user_name ||
+            user.email?.split('@')[0] ||
+            'Developer';
+
+          const uname =
+            dbProfile?.username ||
+            user.user_metadata?.user_name ||
+            user.user_metadata?.preferred_username ||
+            user.email?.split('@')[0] ||
+            'developer';
+
+          const avatar =
+            dbProfile?.avatar_url ||
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            (uname ? `https://github.com/${uname}.png` : null);
+
+          setProfile({
+            displayName: name,
+            username: uname,
+            avatarUrl: avatar,
+            college: dbProfile?.college || 'BMS College of Engineering (BMSCE)',
+            bio: dbProfile?.bio || (user.user_metadata?.user_name ? `GitHub developer @${uname} building on MergeGrid.` : 'Developer and student engineer on MergeGrid.'),
+            skills: dbProfile?.skills?.length ? dbProfile.skills : ['TypeScript', 'Next.js', 'Go', 'Docker', 'PostgreSQL', 'TailwindCSS'],
+            githubUrl: uname ? `https://github.com/${uname}` : 'https://github.com',
+          });
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    loadUser();
+  }, []);
+
+  const initials = profile.displayName
+    ? profile.displayName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'MG';
+
   return (
     <div className="space-y-6">
       {/* Profile Header Banner */}
@@ -28,27 +115,35 @@ export default function ProfilePage() {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-500 text-white font-bold text-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
-              AR
-            </div>
+            {profile.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt={profile.displayName}
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-brand-500 shadow-lg shadow-brand-500/20"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-500 text-white font-bold text-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                {initials}
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-neutral-900">
-                  Alex Rivera
+                  {profile.displayName}
                 </h1>
                 <Badge variant="brand">Full Stack Dev</Badge>
               </div>
               <p className="text-sm text-neutral-500 font-mono mt-0.5">
-                @alex_dev
+                @{profile.username}
               </p>
               <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-neutral-600">
                 <span className="flex items-center gap-1.5 font-medium text-neutral-700">
                   <Building2 className="w-3.5 h-3.5 text-neutral-400" />
-                  BMS College of Engineering (BMSCE)
+                  {profile.college}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-                  Joined September 2025
+                  Active Developer
                 </span>
               </div>
             </div>
@@ -65,13 +160,13 @@ export default function ProfilePage() {
 
         {/* Bio */}
         <p className="text-sm text-neutral-600 mt-5 leading-relaxed max-w-3xl">
-          Pre-final year Computer Science student. Building distributed systems, open-source dev tooling, and competing in algorithmic clashes. Working with Next.js, Go, and PostgreSQL.
+          {profile.bio}
         </p>
 
         {/* Links & Skills */}
         <div className="mt-5 pt-4 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap gap-1.5">
-            {['TypeScript', 'Next.js', 'Go', 'Docker', 'PostgreSQL', 'TailwindCSS'].map((skill) => (
+            {profile.skills.map((skill) => (
               <span
                 key={skill}
                 className="text-xs px-2.5 py-1 rounded-md bg-neutral-100 text-neutral-700 font-medium"
@@ -83,7 +178,7 @@ export default function ProfilePage() {
 
           <div className="flex items-center gap-3 text-xs">
             <a
-              href="https://github.com"
+              href={profile.githubUrl}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1 text-neutral-600 hover:text-neutral-900 font-medium"
