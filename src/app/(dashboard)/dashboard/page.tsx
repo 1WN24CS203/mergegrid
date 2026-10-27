@@ -1,11 +1,9 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardContent } from '@/components/dashboard/dashboard-content';
 
-export const dynamic = 'force-dynamic';
-
-export default async function DashboardPage() {
+async function DashboardContentLoader() {
   const cookieStore = await cookies();
   const demoCookie = cookieStore.get('mergegrid_demo_session')?.value;
 
@@ -53,4 +51,24 @@ export default async function DashboardPage() {
   }
 
   return <DashboardContent displayName={displayName} />;
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-4 animate-pulse">
+          <div className="h-8 bg-neutral-200 rounded w-1/4" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="h-20 bg-neutral-100 rounded-xl" />
+            <div className="h-20 bg-neutral-100 rounded-xl" />
+            <div className="h-20 bg-neutral-100 rounded-xl" />
+            <div className="h-20 bg-neutral-100 rounded-xl" />
+          </div>
+        </div>
+      }
+    >
+      <DashboardContentLoader />
+    </Suspense>
+  );
 }

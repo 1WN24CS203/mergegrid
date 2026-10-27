@@ -1,16 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 
-export const dynamic = 'force-dynamic';
-
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+async function DashboardSessionShell({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const demoCookie = cookieStore.get('mergegrid_demo_session')?.value;
 
@@ -84,4 +78,22 @@ export default async function DashboardLayout({
       };
 
   return <DashboardShell user={userData}>{children}</DashboardShell>;
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen bg-neutral-50 items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <DashboardSessionShell>{children}</DashboardSessionShell>
+    </Suspense>
+  );
 }
