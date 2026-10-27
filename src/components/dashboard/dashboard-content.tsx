@@ -242,19 +242,19 @@ export function DashboardContent({ displayName }: DashboardContentProps) {
                 </div>
               </CardTitle>
             </CardHeader>
-            <div className="p-3 bg-gradient-to-br from-amber-50/60 to-white rounded-xl border border-amber-200/60">
+            <div className="p-3 bg-gradient-to-br from-neutral-50 to-white rounded-xl border border-neutral-200/80">
               <div className="flex items-center gap-2 mb-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                <span className="text-xs font-bold text-rose-600 uppercase">Clash Scheduled</span>
+                <span className="w-2 h-2 rounded-full bg-neutral-400" />
+                <span className="text-xs font-semibold text-neutral-500 uppercase">Season 1 Preparation</span>
               </div>
-              <h4 className="text-sm font-bold text-neutral-900">Inter-College Clash #14</h4>
+              <h4 className="text-sm font-bold text-neutral-900">Next Clash Calendar</h4>
               <p className="text-xs text-neutral-500 mt-1">
-                Compete with engineering peers in 4 algorithmic challenges.
+                Solve practice problems in the arena to prepare for upcoming rated clashes.
               </p>
               <div className="mt-3">
-                <Link href="/contests">
-                  <Button size="sm" className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium">
-                    View Contest Details
+                <Link href="/problems">
+                  <Button size="sm" variant="outline" className="w-full font-medium">
+                    Practice in Arena
                   </Button>
                 </Link>
               </div>
