@@ -243,39 +243,47 @@ export default function ProfilePage() {
       {/* Badges / Achievements */}
       <Card className="p-6">
         <h2 className="text-base font-bold text-neutral-900 mb-4">
-          Earned Badges & Guild Honors
+          Badges & Achievements
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 text-center">
-            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-2">
+          <div className={`p-4 rounded-xl text-center border ${
+            solvedCount > 0
+              ? 'bg-emerald-50/60 border-emerald-200/80 text-emerald-800'
+              : 'bg-neutral-50 border-neutral-200/80 text-neutral-500'
+          }`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${
+              solvedCount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-200 text-neutral-400'
+            }`}>
               <Award className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-neutral-900">DP Virtuoso</h3>
-            <p className="text-[10px] text-neutral-500 mt-1">Solved 50+ Dynamic Programming challenges</p>
+            <h3 className="text-xs font-bold text-neutral-900">Arena Pioneer</h3>
+            <p className="text-[10px] text-neutral-500 mt-1">
+              {solvedCount > 0 ? `Unlocked: Solved ${solvedCount} challenge` : 'Locked: Solve 1 arena challenge'}
+            </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80 text-center">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
-              <GitFork className="w-5 h-5" />
+          <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200/80 text-center">
+            <div className="w-10 h-10 rounded-full bg-neutral-200 text-neutral-400 flex items-center justify-center mx-auto mb-2">
+              <Code2 className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-neutral-900">Campus Maintainer</h3>
-            <p className="text-[10px] text-neutral-500 mt-1">Merged 5+ PRs in collegiate open source</p>
+            <h3 className="text-xs font-bold text-neutral-900">DP Virtuoso</h3>
+            <p className="text-[10px] text-neutral-500 mt-1">Locked: Solve 5 DP challenges</p>
           </div>
 
           <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 text-center">
             <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center mx-auto mb-2">
               <Flame className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-neutral-900">Consistent Grinder</h3>
-            <p className="text-[10px] text-neutral-500 mt-1">Maintained a 14-day daily solve streak</p>
+            <h3 className="text-xs font-bold text-neutral-900">Daily Solver</h3>
+            <p className="text-[10px] text-neutral-500 mt-1">Active: 1-Day Starter Streak</p>
           </div>
 
           <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80 text-center">
             <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mx-auto mb-2">
-              <Code2 className="w-5 h-5" />
+              <GitFork className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-neutral-900">Contest Finalist</h3>
-            <p className="text-[10px] text-neutral-500 mt-1">Placed Top 10 in Clash #12</p>
+            <h3 className="text-xs font-bold text-neutral-900">OSS Contributor</h3>
+            <p className="text-[10px] text-neutral-500 mt-1">Active: Connected to MergeGrid repo</p>
           </div>
         </div>
       </Card>

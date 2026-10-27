@@ -122,23 +122,23 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Social Proof Stats */}
+        {/* Platform Core Highlights */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto border-y border-neutral-800/80 py-8 bg-neutral-950/40 backdrop-blur-sm rounded-2xl">
           <div className="text-center px-4">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">14,200+</div>
-            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Engineers</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-white">400+</div>
+            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Curated Challenges</div>
           </div>
           <div className="text-center px-4 border-l border-neutral-800/60">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">450+</div>
-            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Colleges</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-white">Real-Time</div>
+            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Contest Arena</div>
           </div>
           <div className="text-center px-4 border-l border-neutral-800/60">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">85,000+</div>
-            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Problems Solved</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-white">Open Source</div>
+            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Project Radar</div>
           </div>
           <div className="text-center px-4 border-l border-neutral-800/60">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">1,800+</div>
-            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">OSS Contributions</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-white">Verified</div>
+            <div className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-medium">Placement Vaults</div>
           </div>
         </div>
 
@@ -269,9 +269,7 @@ export default function LandingPage() {
                     <span>Issue Tags</span>
                   </div>
                   {[
-                    { title: 'MergeGrid / code-exec-engine', desc: 'Sandboxed distributed code evaluator built in Go and WebAssembly', stars: 142, issues: '4 good-first-issues', tags: ['Go', 'Wasm', 'Docker'] },
-                    { title: 'campus-connect / placement-tracker', desc: 'Real-time college placement calendar and interview question tracker', stars: 89, issues: '2 beginner bugs', tags: ['Next.js', 'PostgreSQL', 'Tailwind'] },
-                    { title: 'algo-visualizer / tree-graph-anim', desc: 'Interactive visualizer for Red-Black trees and Dijkstra shortest paths', stars: 210, issues: '6 contributions open', tags: ['TypeScript', 'Canvas'] },
+                    { title: '1WN24CS203 / mergegrid', desc: 'All-in-one developer collaboration and competitive coding challenge arena', stars: 1, issues: 'open for contributors', tags: ['Next.js', 'Supabase', 'Tailwind'] },
                   ].map((repo, i) => (
                     <div
                       key={i}

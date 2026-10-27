@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardContent } from '@/components/dashboard/dashboard-content';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const cookieStore = await cookies();
   const demoCookie = cookieStore.get('mergegrid_demo_session')?.value;

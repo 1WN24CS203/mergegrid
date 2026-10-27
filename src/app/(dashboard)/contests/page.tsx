@@ -39,10 +39,10 @@ const contestsData: Contest[] = [
     status: 'live',
     startTime: 'Now Live',
     duration: '2h 00m remaining',
-    registeredCount: 842,
+    registeredCount: 0,
     prizePool: '₹25,000 + Swag Kits',
     difficulty: 'Open',
-    description: '4 algorithmic questions testing graphs, DP, and greedy heuristics.',
+    description: '4 algorithmic challenges testing graphs, dynamic programming, and greedy heuristics.',
   },
   {
     id: 'c-2',
@@ -50,10 +50,10 @@ const contestsData: Contest[] = [
     status: 'upcoming',
     startTime: 'Saturday, 8:00 PM IST',
     duration: '90 Minutes',
-    registeredCount: 1420,
+    registeredCount: 0,
     prizePool: 'MergeGrid Elite Badges',
     difficulty: 'Beginner',
-    description: 'Speed-based challenge tailored for 1st & 2nd year students.',
+    description: 'Speed-based challenge tailored for core data structures and problem solving.',
   },
   {
     id: 'c-3',
@@ -61,21 +61,10 @@ const contestsData: Contest[] = [
     status: 'upcoming',
     startTime: 'Nov 15, 2026',
     duration: '3h 30m',
-    registeredCount: 3120,
+    registeredCount: 0,
     prizePool: '₹1,00,000 + Tech Interviews',
     difficulty: 'Hardcore',
     description: 'Flagship national competition between premier engineering institutions.',
-  },
-  {
-    id: 'c-4',
-    title: 'MergeGrid Fall Hack & Algorithms #13',
-    status: 'ended',
-    startTime: 'Completed Oct 18',
-    duration: '2 Hours',
-    registeredCount: 960,
-    prizePool: 'Completed',
-    difficulty: 'Open',
-    description: 'Winning team: BMSCE Dev Guild (Score: 400/400).',
   },
 ];
 
@@ -172,7 +161,7 @@ export default function ContestsPage() {
               MergeGrid Inter-College Clash #14
             </h2>
             <p className="text-sm text-neutral-600 mt-1 max-w-xl">
-              Leaderboard is updating in real time. 4 algorithmic challenges. 842 participants currently submitting code.
+              Leaderboard updates in real time. 4 algorithmic challenges are open for code submissions in the arena.
             </p>
             <div className="flex items-center gap-4 mt-3 text-xs text-neutral-600 font-mono">
               <span className="flex items-center gap-1 font-semibold text-neutral-900">

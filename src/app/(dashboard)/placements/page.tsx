@@ -36,7 +36,7 @@ const companiesData: CompanyArchive[] = [
     difficulty: 'High',
     hiringCycle: 'Campus 2025-2026',
     topics: ['Segment Trees', 'Trie', 'Dynamic Programming', 'Concurrency'],
-    solvedCount: 18,
+    solvedCount: 0,
     totalQuestions: 45,
   },
   {
@@ -46,7 +46,7 @@ const companiesData: CompanyArchive[] = [
     difficulty: 'High',
     hiringCycle: 'SDE 1 Full Time',
     topics: ['Graphs / BFS-DFS', 'Heaps', 'Leadership Principles', 'System Design'],
-    solvedCount: 29,
+    solvedCount: 0,
     totalQuestions: 50,
   },
   {
@@ -56,7 +56,7 @@ const companiesData: CompanyArchive[] = [
     difficulty: 'Medium',
     hiringCycle: 'Internship & FTE',
     topics: ['Linked Lists', 'Binary Trees', 'Strings', 'DBMS Concepts'],
-    solvedCount: 34,
+    solvedCount: 0,
     totalQuestions: 40,
   },
   {
@@ -66,7 +66,7 @@ const companiesData: CompanyArchive[] = [
     difficulty: 'High',
     hiringCycle: 'FTE 2026',
     topics: ['Data Structures', 'Distributed Rate Limiter', 'Clean Code'],
-    solvedCount: 12,
+    solvedCount: 0,
     totalQuestions: 25,
   },
 ];
