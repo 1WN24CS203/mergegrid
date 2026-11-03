@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
+import { ProposeProblemModal, ProposedProblemData } from '@/components/problems/propose-problem-modal';
 
 type SupportedLanguage = 'typescript' | 'python' | 'cpp' | 'java';
 
@@ -56,17 +57,14 @@ interface Problem {
   starterCode: Record<SupportedLanguage, string>;
 }
 
-interface GitHubCommitRecord {
-  id: string;
-  problemId: string;
-  problemTitle: string;
-  platform: string;
-  repo: string;
-  filePath: string;
-  commitSha: string;
-  commitUrl: string;
-  timestamp: string;
-  language: string;
+interface TestCaseResult {
+  index: number;
+  input: string;
+  expected: string;
+  actual: string;
+  passed: boolean;
+  error?: string;
+  runtimeMs: number;
 }
 
 // Curated Top Problems from https://github.com/liquidslr/leetcode-company-wise-problems
@@ -939,6 +937,7 @@ export default function ProblemsPage() {
 
   // Active Code Space Workbench State
   const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
+  const [showProposeModal, setShowProposeModal] = useState(false);
   const [selectedLang, setSelectedLang] = useState<SupportedLanguage>('typescript');
   const [userCode, setUserCode] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
@@ -967,6 +966,12 @@ export default function ProblemsPage() {
   // Load persisted solved problems, query params & credentials
   useEffect(() => {
     try {
+      const savedCustom = localStorage.getItem('mergegrid_custom_problems');
+      if (savedCustom) {
+        const customList: Problem[] = JSON.parse(savedCustom);
+        setProblems((prev) => [...customList, ...prev.filter((p) => !customList.some((c) => c.id === p.id))]);
+      }
+
       const savedSolved = localStorage.getItem('mergegrid_solved_problems');
       if (savedSolved) {
         const solvedIds: string[] = JSON.parse(savedSolved);
@@ -1024,6 +1029,18 @@ export default function ProblemsPage() {
       setRunOutput(null);
     }
   }, [activeProblem, selectedLang]);
+
+  const handleProblemApproved = (newProblem: ProposedProblemData) => {
+    setProblems((prev) => [newProblem as any, ...prev]);
+    try {
+      const savedCustom = localStorage.getItem('mergegrid_custom_problems');
+      const customList = savedCustom ? JSON.parse(savedCustom) : [];
+      localStorage.setItem('mergegrid_custom_problems', JSON.stringify([newProblem, ...customList]));
+    } catch {
+      // Ignore
+    }
+    setActiveProblem(newProblem as any);
+  };
 
   // Execute sandboxed test run
   const handleRunCode = () => {
@@ -1310,6 +1327,13 @@ export default function ProblemsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm flex items-center gap-1.5"
+            onClick={() => setShowProposeModal(true)}
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" /> Propose Question (AI Review)
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -1961,6 +1985,14 @@ export default function ProblemsPage() {
           </div>
         </div>
       )}
+
+      {/* AI Problem Proposal & Review Modal */}
+      <ProposeProblemModal
+        isOpen={showProposeModal}
+        onClose={() => setShowProposeModal(false)}
+        existingTitles={problems.map((p) => p.title)}
+        onProblemApproved={handleProblemApproved}
+      />
     </div>
   );
 }

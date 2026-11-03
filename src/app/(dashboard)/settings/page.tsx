@@ -35,10 +35,6 @@ export default function SettingsPage() {
         if (parsed.username) setUsername(parsed.username);
         if (parsed.college) setCollege(parsed.college);
         if (parsed.bio) setBio(parsed.bio);
-      } else if (typeof document !== 'undefined' && document.cookie.includes('github')) {
-        setDisplayName('1WN24CS203');
-        setUsername('1WN24CS203');
-        setBio('BMSCE Developer Guild member building open-source platforms and systems on MergeGrid.');
       }
     } catch {
       // Ignore

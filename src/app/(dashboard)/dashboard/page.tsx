@@ -43,11 +43,7 @@ async function DashboardContentLoader() {
 
   // Handle demo session naming if not logged into Supabase
   if (displayName === 'Developer' && demoCookie) {
-    if (demoCookie.startsWith('github')) {
-      displayName = '1WN24CS203';
-    } else {
-      displayName = 'Developer';
-    }
+    displayName = 'Developer';
   }
 
   return <DashboardContent displayName={displayName} />;

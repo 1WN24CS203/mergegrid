@@ -63,13 +63,6 @@ async function DashboardSessionShell({ children }: { children: React.ReactNode }
           null,
         email: user.email || '',
       }
-    : demoCookie?.startsWith('github')
-    ? {
-        display_name: '1WN24CS203 (GitHub)',
-        username: '1WN24CS203',
-        avatar_url: 'https://github.com/1WN24CS203.png',
-        email: 'prathyushjain.cs24@bmsce.ac.in',
-      }
     : {
         display_name: 'Developer',
         username: 'developer',

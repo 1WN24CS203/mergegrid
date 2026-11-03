@@ -25,10 +25,10 @@ export default function ProfilePage() {
     displayName: 'Developer',
     username: 'developer',
     avatarUrl: null as string | null,
-    college: 'BMS College of Engineering (BMSCE)',
-    bio: 'Student engineer building distributed systems, open-source dev tooling, and competing in algorithmic clashes.',
-    skills: ['TypeScript', 'Next.js', 'Go', 'Docker', 'PostgreSQL', 'TailwindCSS'],
-    githubUrl: 'https://github.com/1WN24CS203/mergegrid',
+    college: 'Engineering Institute',
+    bio: 'Student engineer building open-source tooling, full-stack systems, and practicing algorithmic challenges.',
+    skills: ['TypeScript', 'Python', 'React', 'Next.js', 'PostgreSQL', 'TailwindCSS'],
+    githubUrl: 'https://github.com',
   });
   const [solvedCount, setSolvedCount] = useState(0);
 
@@ -53,19 +53,6 @@ export default function ProfilePage() {
     }
 
     async function loadUser() {
-      // Check cookies for demo mode first
-      const cookies = document.cookie;
-      if (cookies.includes('mergegrid_demo_session=github')) {
-        setProfile((prev) => ({
-          ...prev,
-          displayName: '1WN24CS203',
-          username: '1WN24CS203',
-          avatarUrl: 'https://github.com/1WN24CS203.png',
-          githubUrl: 'https://github.com/1WN24CS203/mergegrid',
-          bio: 'BMSCE Developer Guild member building open-source platforms and systems on MergeGrid.',
-        }));
-      }
-
       // Check live Supabase
       try {
         const supabase = createClient();
