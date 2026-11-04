@@ -269,7 +269,7 @@ export default function LandingPage() {
                     <span>Issue Tags</span>
                   </div>
                   {[
-                    { title: '1WN24CS203 / mergegrid', desc: 'All-in-one developer collaboration and competitive coding challenge arena', stars: 1, issues: 'open for contributors', tags: ['Next.js', 'Supabase', 'Tailwind'] },
+                    { title: 'mergegrid / algorithms-hub', desc: 'All-in-one developer collaboration and competitive coding challenge arena', stars: 124, issues: 'open for contributors', tags: ['Next.js', 'Supabase', 'Tailwind'] },
                   ].map((repo, i) => (
                     <div
                       key={i}

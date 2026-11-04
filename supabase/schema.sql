@@ -250,3 +250,156 @@ CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles (username);
 CREATE INDEX IF NOT EXISTS idx_profiles_problems_solved ON public.profiles (problems_solved DESC);
 CREATE INDEX IF NOT EXISTS idx_custom_problems_created_at ON public.custom_problems (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_solved_problems_user ON public.user_solved_problems (user_id);
+
+-- ====================================================================
+-- 6. GROUPS Table (Friends Groups & Official Campus Guilds)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.groups (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE,
+  description TEXT,
+  group_type TEXT NOT NULL DEFAULT 'friends' CHECK (group_type IN ('friends', 'official', 'guild', 'study')),
+  leader_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  avatar_url TEXT,
+  practice_topics TEXT[] DEFAULT ARRAY['Algorithms', 'Data Structures', 'Dynamic Programming'],
+  member_count INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ====================================================================
+-- 7. GROUP_MEMBERS Table (Membership & Roles)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.group_members (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role TEXT DEFAULT 'member' CHECK (role IN ('leader', 'admin', 'member')),
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(group_id, user_id)
+);
+
+-- ====================================================================
+-- 8. CONTESTS Table (Clashes, Speedruns, & Targeted Challenges)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.contests (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  end_time TIMESTAMPTZ NOT NULL,
+  duration_minutes INTEGER DEFAULT 60,
+  status TEXT DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'live', 'ended')),
+  target_type TEXT DEFAULT 'all' CHECK (target_type IN ('all', 'selected_friends')),
+  invited_user_ids UUID[] DEFAULT ARRAY[]::UUID[],
+  problem_ids TEXT[] DEFAULT ARRAY[]::TEXT[],
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS Enablement
+ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.contests ENABLE ROW LEVEL SECURITY;
+
+-- Groups Policies
+DROP POLICY IF EXISTS "Groups are viewable by everyone" ON public.groups;
+CREATE POLICY "Groups are viewable by everyone"
+  ON public.groups FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can create groups" ON public.groups;
+CREATE POLICY "Authenticated users can create groups"
+  ON public.groups FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "Group leaders can update their group" ON public.groups;
+CREATE POLICY "Group leaders can update their group"
+  ON public.groups FOR UPDATE
+  USING (auth.uid() = leader_id);
+
+-- Group Members Policies
+DROP POLICY IF EXISTS "Group members are viewable by everyone" ON public.group_members;
+CREATE POLICY "Group members are viewable by everyone"
+  ON public.group_members FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Users can join groups" ON public.group_members;
+CREATE POLICY "Users can join groups"
+  ON public.group_members FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Members can leave groups" ON public.group_members;
+CREATE POLICY "Members can leave groups"
+  ON public.group_members FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Contests Policies
+DROP POLICY IF EXISTS "Contests are viewable by everyone" ON public.contests;
+CREATE POLICY "Contests are viewable by everyone"
+  ON public.contests FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Contest creation RLS" ON public.contests;
+CREATE POLICY "Contest creation RLS"
+  ON public.contests FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ====================================================================
+-- CONTEST CREATION PERMISSION ENFORCEMENT TRIGGER
+-- Rule 1: In friends group, ANY member can call for contest (even by selecting some people).
+-- Rule 2: In other groups (official/guild), ONLY group leaders can create contests.
+-- ====================================================================
+CREATE OR REPLACE FUNCTION public.enforce_contest_creation_rules()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_group_type TEXT;
+  v_leader_id UUID;
+  v_is_member BOOLEAN;
+BEGIN
+  -- If contest is tied to a group, strictly enforce permission rules
+  IF NEW.group_id IS NOT NULL THEN
+    SELECT group_type, leader_id INTO v_group_type, v_leader_id
+    FROM public.groups
+    WHERE id = NEW.group_id;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Target group does not exist';
+    END IF;
+
+    IF v_group_type = 'friends' THEN
+      -- In a friends group, ANY member of the group can call a contest
+      SELECT EXISTS (
+        SELECT 1 FROM public.group_members
+        WHERE group_id = NEW.group_id AND user_id = NEW.created_by
+      ) INTO v_is_member;
+
+      -- If the creator is the leader or in group_members, allow
+      IF NOT v_is_member AND NEW.created_by != v_leader_id THEN
+        RAISE EXCEPTION 'Only members of this friends group can call a contest';
+      END IF;
+    ELSE
+      -- In official/guild/other groups, ONLY the group leader can create contests
+      IF NEW.created_by != v_leader_id THEN
+        RAISE EXCEPTION 'Only the group leader can create contests in non-friends groups (% group)', v_group_type;
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_enforce_contest_creation ON public.contests;
+CREATE TRIGGER trg_enforce_contest_creation
+  BEFORE INSERT ON public.contests
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_contest_creation_rules();
+
+-- Indexes for groups & contests
+CREATE INDEX IF NOT EXISTS idx_groups_slug ON public.groups (slug);
+CREATE INDEX IF NOT EXISTS idx_groups_type ON public.groups (group_type);
+CREATE INDEX IF NOT EXISTS idx_group_members_group_user ON public.group_members (group_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_contests_group ON public.contests (group_id);
+CREATE INDEX IF NOT EXISTS idx_contests_status ON public.contests (status);

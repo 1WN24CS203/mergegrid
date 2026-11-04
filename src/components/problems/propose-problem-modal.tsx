@@ -123,8 +123,10 @@ export function ProposeProblemModal({
     summary: string;
     similarityCheck: {
       exists: boolean;
+      isConceptualMatch?: boolean;
       similarTo: string | null;
       similarityScore: number;
+      explanation?: string;
     };
     strengths: string[];
     recommendations: string[];
@@ -589,22 +591,38 @@ export function ProposeProblemModal({
               </div>
 
               {/* Duplicate & Originality Check */}
-              <div className="p-3 rounded-lg bg-white border border-neutral-200 text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck
-                    className={`w-4 h-4 ${
-                      reviewResult.similarityCheck.exists ? 'text-rose-500' : 'text-emerald-500'
-                    }`}
-                  />
-                  <span className="font-semibold text-neutral-800">Originality &amp; Duplicate Check:</span>
-                  <span className="text-neutral-600">
-                    {reviewResult.similarityCheck.exists
-                      ? `High similarity with "${reviewResult.similarityCheck.similarTo}" (${reviewResult.similarityCheck.similarityScore}% match)`
-                      : reviewResult.similarityCheck.similarTo
-                      ? `Moderate likeness to "${reviewResult.similarityCheck.similarTo}" (${reviewResult.similarityCheck.similarityScore}% match)`
-                      : 'No duplicate questions detected in Arena or LeetCode catalog'}
-                  </span>
+              <div className="p-3 rounded-lg bg-white border border-neutral-200 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck
+                      className={`w-4 h-4 ${
+                        reviewResult.similarityCheck.exists ? 'text-rose-500' : 'text-emerald-500'
+                      }`}
+                    />
+                    <span className="font-semibold text-neutral-800">
+                      {reviewResult.similarityCheck.isConceptualMatch
+                        ? 'Conceptual & Algorithmic Duplicate Check:'
+                        : 'Originality & Duplicate Check:'}
+                    </span>
+                    <span className="text-neutral-600">
+                      {reviewResult.similarityCheck.exists
+                        ? `High similarity with "${reviewResult.similarityCheck.similarTo}" (${reviewResult.similarityCheck.similarityScore}% match)`
+                        : reviewResult.similarityCheck.similarTo
+                        ? `Moderate likeness to "${reviewResult.similarityCheck.similarTo}" (${reviewResult.similarityCheck.similarityScore}% match)`
+                        : 'No duplicate questions detected in Arena or LeetCode catalog'}
+                    </span>
+                  </div>
+                  {reviewResult.similarityCheck.isConceptualMatch && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+                      Semantic Match
+                    </span>
+                  )}
                 </div>
+                {reviewResult.similarityCheck.explanation && (
+                  <p className="text-[11px] text-neutral-500 pl-6 border-l-2 border-amber-400 font-sans">
+                    {reviewResult.similarityCheck.explanation}
+                  </p>
+                )}
               </div>
 
               {/* Strengths & Recommendations */}

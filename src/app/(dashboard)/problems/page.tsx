@@ -123,12 +123,13 @@ export default function ProblemsPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmittingPlatform, setIsSubmittingPlatform] = useState(false);
   const [runOutput, setRunOutput] = useState<EvaluationResult | null>(null);
+  const [mobileTab, setMobileTab] = useState<'description' | 'editor'>('description');
 
   // Platform and GitHub Sync Configuration
   const [showSyncConfig, setShowSyncConfig] = useState(false);
   const [showCommitLog, setShowCommitLog] = useState(false);
-  const [githubRepo, setGithubRepo] = useState('mergegrid');
-  const [githubUser, setGithubUser] = useState('1WN24CS203');
+  const [githubRepo, setGithubRepo] = useState('');
+  const [githubUser, setGithubUser] = useState('');
   const [githubToken, setGithubToken] = useState('');
   const [leetcodeSession, setLeetcodeSession] = useState('');
   const [leetcodeCsrf, setLeetcodeCsrf] = useState('');
@@ -771,7 +772,6 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
           <p className="text-sm text-neutral-500 mt-1 flex items-center gap-2 flex-wrap">
             <span>Verified company tracks</span>
             <span>• Comprehensive interview archives ({selectedCompany} track)</span>
-            <span>• Live LeetCode submit &amp; GitHub commit sync</span>
           </p>
         </div>
 
@@ -782,22 +782,6 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             onClick={() => setShowProposeModal(true)}
           >
             <Sparkles className="w-4 h-4 text-amber-300" /> Propose Question (AI Review)
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            icon={<Settings className="w-4 h-4 text-neutral-700" />}
-            onClick={() => setShowSyncConfig(true)}
-          >
-            Platform Sync ({githubRepo})
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            icon={<GitCommit className="w-4 h-4 text-emerald-600" />}
-            onClick={() => setShowCommitLog(true)}
-          >
-            Commits ({commitHistory.length})
           </Button>
         </div>
       </div>
@@ -1129,16 +1113,16 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full border border-neutral-200 overflow-hidden flex flex-col h-[94vh] animate-scale-in">
             {/* Code Space Top Header */}
-            <div className="px-5 py-3.5 border-b border-neutral-200 bg-neutral-900 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <span className="text-xs px-2.5 py-0.5 rounded font-mono font-bold bg-neutral-800 text-brand-400 border border-neutral-700">
+            <div className="px-3 sm:px-5 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-900 text-white flex items-center justify-between shrink-0 gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <span className="text-xs px-2 sm:px-2.5 py-0.5 rounded font-mono font-bold bg-neutral-800 text-brand-400 border border-neutral-700 shrink-0">
                   {activeProblem.platformId}
                 </span>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-white truncate max-w-[150px] sm:max-w-xs md:max-w-md">
                   {activeProblem.title}
                 </h3>
                 <span
-                  className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                  className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded shrink-0 ${
                     activeProblem.difficulty === 'Easy'
                       ? 'bg-emerald-500/20 text-emerald-400'
                       : activeProblem.difficulty === 'Medium'
@@ -1150,12 +1134,12 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <a
                   href={activeProblem.platformUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-neutral-300 hover:text-white flex items-center gap-1.5 transition-colors bg-neutral-800 px-2.5 py-1 rounded border border-neutral-700"
+                  className="hidden sm:flex text-xs text-neutral-300 hover:text-white items-center gap-1.5 transition-colors bg-neutral-800 px-2.5 py-1 rounded border border-neutral-700"
                   title="Open on official platform"
                 >
                   <span>{activeProblem.platform}</span>
@@ -1170,10 +1154,36 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
               </div>
             </div>
 
+            {/* Mobile Panel Switcher (Visible on mobile/tablet, hidden on lg desktop) */}
+            <div className="lg:hidden flex border-b border-neutral-800 bg-neutral-900 text-xs font-semibold shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileTab('description')}
+                className={`flex-1 py-2.5 text-center transition-colors cursor-pointer ${
+                  mobileTab === 'description'
+                    ? 'bg-neutral-800 text-brand-400 border-b-2 border-brand-500 font-bold'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Problem Statement
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('editor')}
+                className={`flex-1 py-2.5 text-center transition-colors cursor-pointer ${
+                  mobileTab === 'editor'
+                    ? 'bg-neutral-800 text-brand-400 border-b-2 border-brand-500 font-bold'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Code Space &amp; Runner
+              </button>
+            </div>
+
             {/* Code Space Workbench Split Panels */}
             <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
               {/* Left Panel: Problem Statement & Specs */}
-              <div className="w-full lg:w-5/12 border-b lg:border-b-0 lg:border-r border-neutral-200 overflow-y-auto p-5 space-y-5 bg-white">
+              <div className={`w-full lg:w-5/12 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto p-4 sm:p-5 space-y-5 bg-white dark:bg-[#161b22] ${mobileTab === 'description' ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col'}`}>
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
                     Problem Description
@@ -1239,31 +1249,10 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                     ))}
                   </ul>
                 </div>
-
-                {/* Dual Sync Integration Box */}
-                <div className="p-4 rounded-xl bg-neutral-900 text-white space-y-2.5 border border-neutral-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-brand-400" /> Platform &amp; GitHub Sync
-                    </span>
-                    <button
-                      onClick={() => setShowSyncConfig(true)}
-                      className="text-[11px] text-brand-400 hover:underline cursor-pointer"
-                    >
-                      Credentials
-                    </button>
-                  </div>
-                  <div className="text-xs font-mono text-neutral-300">
-                    GitHub Target: <span className="text-white font-semibold">{githubUser}/{githubRepo}</span>
-                  </div>
-                  <p className="text-[11px] text-neutral-400 leading-relaxed">
-                    Submitting automatically copies your active code, opens {activeProblem.platform} for live judge grading, and writes the solution file to <code className="text-brand-300">solutions/{activeProblem.slug}.{selectedLang === 'typescript' ? 'ts' : selectedLang === 'python' ? 'py' : selectedLang}</code> on your GitHub repo.
-                  </p>
-                </div>
               </div>
 
               {/* Right Panel: Code Space Editor & Execution Console */}
-              <div className="w-full lg:w-7/12 flex flex-col min-h-0 bg-[#0d1117]">
+              <div className={`w-full lg:w-7/12 flex flex-col min-h-0 bg-[#0d1117] ${mobileTab === 'editor' ? 'flex flex-1' : 'hidden lg:flex'}`}>
                 {/* Editor Top Bar */}
                 <div className="px-4 py-2 bg-[#161b22] border-b border-neutral-800 flex items-center justify-between text-xs shrink-0">
                   <div className="flex items-center gap-2">
@@ -1459,212 +1448,19 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                       Run Tests
                     </Button>
 
-                    {/* Submit directly to LeetCode / Platform */}
+                    {/* Submit directly to LeetCode / Official Platform */}
                     <Button
                       size="sm"
-                      variant="outline"
                       onClick={handleSubmitToPlatform}
                       loading={isSubmittingPlatform}
-                      className="bg-[#21262d] hover:bg-[#30363d] text-amber-300 border-amber-600/40 hover:border-amber-500"
-                      icon={<ExternalLink className="w-3.5 h-3.5 text-amber-400" />}
+                      className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
+                      icon={<ExternalLink className="w-3.5 h-3.5 text-white" />}
                     >
                       Submit to {activeProblem.platform}
                     </Button>
-
-                    {/* Submit & Commit to GitHub */}
-                    <Button
-                      size="sm"
-                      onClick={handleSubmitAndCommit}
-                      loading={isCommitting}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md"
-                      icon={<Github className="w-3.5 h-3.5 text-white" />}
-                    >
-                      Save to GitHub
-                    </Button>
-
-                    {/* Submit Both in 1-Click */}
-                    <Button
-                      size="sm"
-                      onClick={handleSubmitBoth}
-                      className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md"
-                      icon={<Sparkles className="w-3.5 h-3.5 text-white" />}
-                    >
-                      Submit All
-                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Platform & GitHub Sync Credentials Modal */}
-      {showSyncConfig && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full border border-neutral-200 p-6 animate-scale-in">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-neutral-900" /> Platform &amp; GitHub Sync Credentials
-              </h3>
-              <button
-                onClick={() => setShowSyncConfig(false)}
-                className="text-neutral-400 hover:text-neutral-600 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleSaveSyncSettings} className="space-y-4">
-              <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 space-y-3">
-                <p className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
-                  <Github className="w-4 h-4 text-neutral-900" /> GitHub Configuration
-                </p>
-                <div>
-                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                    GitHub Username
-                  </label>
-                  <Input
-                    value={githubUser}
-                    onChange={(e) => setGithubUser(e.target.value)}
-                    placeholder="e.g. 1WN24CS203"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                    Target Repository Name
-                  </label>
-                  <Input
-                    value={githubRepo}
-                    onChange={(e) => setGithubRepo(e.target.value)}
-                    placeholder="e.g. mergegrid or leetcode-solutions"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                    GitHub Personal Access Token (for direct Git commits)
-                  </label>
-                  <input
-                    type="password"
-                    value={githubToken}
-                    onChange={(e) => setGithubToken(e.target.value)}
-                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                    className="w-full text-xs font-mono border border-neutral-200 rounded-lg p-2.5 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                  <p className="text-[11px] text-neutral-500 mt-1">
-                    Allows automated REST commits to your repository with a token holding `repo` scope.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 space-y-3">
-                <p className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-amber-500" /> LeetCode Direct Judge Credentials (Optional)
-                </p>
-                <div>
-                  <label className="text-xs font-semibold text-neutral-700 block mb-1">
-                    LEETCODE_SESSION Cookie
-                  </label>
-                  <input
-                    type="password"
-                    value={leetcodeSession}
-                    onChange={(e) => setLeetcodeSession(e.target.value)}
-                    placeholder="Paste LEETCODE_SESSION cookie from leetcode.com"
-                    className="w-full text-xs font-mono border border-neutral-200 rounded-lg p-2.5 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
-                  <p className="text-[11px] text-neutral-500 mt-1">
-                    If configured, executes automated judge submissions. Otherwise, 1-click clipboard paste to LeetCode web is ready out-of-the-box.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSyncConfig(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" className="bg-brand-600 hover:bg-brand-700 text-white font-semibold">
-                  Save Credentials
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* GitHub Commits Log Modal */}
-      {showCommitLog && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full border border-neutral-200 p-6 animate-scale-in max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-200 mb-4">
-              <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-                <GitCommit className="w-5 h-5 text-emerald-600" /> Synced GitHub Commits ({commitHistory.length})
-              </h3>
-              <button
-                onClick={() => setShowCommitLog(false)}
-                className="text-neutral-400 hover:text-neutral-600 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-3">
-              {commitHistory.length === 0 ? (
-                <div className="text-center py-12 text-neutral-400">
-                  <GitCommit className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm font-semibold text-neutral-700">No Commits Synced Yet</p>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    Solve a challenge and click "Save to GitHub" to save solutions directly to your profile.
-                  </p>
-                </div>
-              ) : (
-                commitHistory.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-white transition-colors flex items-center justify-between gap-3 text-xs"
-                  >
-                    <div>
-                      <div className="font-bold text-neutral-900 flex items-center gap-2">
-                        <span>{item.problemTitle}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200 font-mono">
-                          {item.platform}
-                        </span>
-                      </div>
-                      <div className="text-neutral-500 font-mono text-[11px] mt-1">
-                        {item.filePath} • <span className="text-neutral-700">{item.repo}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-neutral-400 text-[11px]">
-                        sha: {item.commitSha}
-                      </span>
-                      <a
-                        href={item.commitUrl || `https://github.com/${item.repo}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium text-[11px]"
-                      >
-                        <Github className="w-3 h-3" /> View Commit <ExternalLink className="w-3 h-3 ml-0.5" />
-                      </a>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
-              <span>Auto-commits are formatted with conventional commits (feat: solve ...)</span>
-              <Button size="sm" variant="outline" onClick={() => setShowCommitLog(false)}>
-                Close
-              </Button>
             </div>
           </div>
         </div>

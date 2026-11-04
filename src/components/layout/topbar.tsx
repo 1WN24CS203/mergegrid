@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, Search, Bell } from 'lucide-react';
 import { useSidebar } from './sidebar';
+import { ThemeToggle } from '@/components/theme/theme-provider';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Home',
@@ -71,6 +72,9 @@ export function Topbar() {
           ↵
         </kbd>
       </form>
+
+      {/* Theme Toggle */}
+      <ThemeToggle />
 
       {/* Notifications bell */}
       <Link

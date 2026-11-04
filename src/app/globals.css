@@ -64,6 +64,95 @@
 }
 
 /* ============================================
+   Dark Mode Overrides
+   ============================================ */
+
+.dark {
+  --color-neutral-50: #0d1117;
+  --color-neutral-100: #161b22;
+  --color-neutral-200: #21262d;
+  --color-neutral-300: #30363d;
+  --color-neutral-400: #8b949e;
+  --color-neutral-500: #8b949e;
+  --color-neutral-600: #c9d1d9;
+  --color-neutral-700: #e6edf3;
+  --color-neutral-800: #f0f6fc;
+  --color-neutral-900: #ffffff;
+
+  color-scheme: dark;
+}
+
+.dark body {
+  color: #f0f6fc;
+  background-color: #0d1117;
+}
+
+.dark .bg-white {
+  background-color: #161b22 !important;
+}
+
+.dark .bg-neutral-50 {
+  background-color: #0d1117 !important;
+}
+
+.dark .bg-neutral-100 {
+  background-color: #21262d !important;
+}
+
+.dark .bg-neutral-150 {
+  background-color: #30363d !important;
+}
+
+.dark .hover\:bg-neutral-50:hover {
+  background-color: #21262d !important;
+}
+
+.dark .hover\:bg-neutral-100:hover {
+  background-color: #2a313c !important;
+}
+
+.dark .border-neutral-200,
+.dark .border-neutral-100 {
+  border-color: #30363d !important;
+}
+
+.dark .text-neutral-900 {
+  color: #f0f6fc !important;
+}
+
+.dark .text-neutral-800 {
+  color: #e6edf3 !important;
+}
+
+.dark .text-neutral-700 {
+  color: #c9d1d9 !important;
+}
+
+.dark .text-neutral-600 {
+  color: #8b949e !important;
+}
+
+.dark .text-neutral-500 {
+  color: #8b949e !important;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #0d1117 !important;
+  color: #f0f6fc !important;
+  border-color: #30363d !important;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #30363d;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* ============================================
    Base Styles
    ============================================ */
 

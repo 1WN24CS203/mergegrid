@@ -16,6 +16,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
+import { useTheme } from '@/components/theme/theme-provider';
+import { Laptop } from 'lucide-react';
 
 export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('Developer');
@@ -25,6 +27,7 @@ export default function SettingsPage() {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [contestReminders, setContestReminders] = useState(true);
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
 
   React.useEffect(() => {
     try {
@@ -123,6 +126,75 @@ export default function SettingsPage() {
                 className="w-full text-sm border border-neutral-200 rounded-lg p-2.5 bg-white text-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
+          </div>
+        </Card>
+
+        {/* Appearance / Dark Theme Selection */}
+        <Card className="p-6">
+          <h2 className="text-base font-bold text-neutral-900 mb-4 flex items-center gap-2">
+            <Moon className="w-4 h-4 text-brand-600" /> Interface Theme
+          </h2>
+          <p className="text-xs text-neutral-500 mb-4">
+            Select your preferred display mode or sync seamlessly with your system preferences.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => setTheme('light')}
+              className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                theme === 'light'
+                  ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20'
+                  : 'border-neutral-200 hover:border-neutral-300 bg-white'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <Sun className="w-5 h-5 text-amber-500" />
+                {theme === 'light' && <Check className="w-4 h-4 text-brand-600 font-bold" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-neutral-900">Light Mode</p>
+                <p className="text-xs text-neutral-500 mt-0.5">High clarity daylight theme</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                theme === 'dark'
+                  ? 'border-brand-600 bg-neutral-900 text-white ring-2 ring-brand-500/20'
+                  : 'border-neutral-200 hover:border-neutral-300 bg-white'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <Moon className="w-5 h-5 text-indigo-400" />
+                {theme === 'dark' && <Check className="w-4 h-4 text-brand-400 font-bold" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">Dark Mode</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Eye-friendly nocturnal coding</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTheme('system')}
+              className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                theme === 'system'
+                  ? 'border-brand-600 bg-brand-50/50 ring-2 ring-brand-500/20'
+                  : 'border-neutral-200 hover:border-neutral-300 bg-white'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <Laptop className="w-5 h-5 text-neutral-600" />
+                {theme === 'system' && <Check className="w-4 h-4 text-brand-600 font-bold" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-neutral-900">System Preference</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Syncs with OS dark/light mode</p>
+              </div>
+            </button>
           </div>
         </Card>
 
