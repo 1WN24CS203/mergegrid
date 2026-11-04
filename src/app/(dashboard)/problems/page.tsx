@@ -24,6 +24,8 @@ import {
   Building2,
   Globe,
   Share2,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { Github } from '@/components/ui/icons';
 import { Card } from '@/components/ui/card';
@@ -33,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { ProposeProblemModal, ProposedProblemData } from '@/components/problems/propose-problem-modal';
 import { createClient } from '@/lib/supabase/client';
+import { curatedProblemsCatalog, Problem as CatalogProblem } from '@/lib/problems-data';
 
 type SupportedLanguage =
   | 'c'
@@ -63,7 +66,7 @@ interface Problem {
     explanation?: string;
   }[];
   constraints: string[];
-  starterCode: Record<string, string>;
+  starterCode?: Record<string, string>;
 }
 
 interface TestCaseResult {
@@ -89,869 +92,13 @@ interface GitHubCommitRecord {
   language: string;
 }
 
-// Curated Top Problems from https://github.com/liquidslr/leetcode-company-wise-problems
-// Clean starter strips only: NO pre-filled algorithms or answers!
-const problemsData: Problem[] = [
-  {
-    id: '1',
-    slug: 'two-sum',
-    title: 'Two Sum',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #1',
-    platformUrl: 'https://leetcode.com/problems/two-sum/',
-    difficulty: 'Easy',
-    category: 'Arrays & Hashing',
-    acceptance: '53.4%',
-    solved: false,
-    companies: ['Google', 'Amazon', 'Meta', 'Apple', 'Microsoft', 'Uber'],
-    description:
-      'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.',
-    examples: [
-      {
-        input: 'nums = [2,7,11,15], target = 9',
-        output: '[0,1]',
-        explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].',
-      },
-      {
-        input: 'nums = [3,2,4], target = 6',
-        output: '[1,2]',
-      },
-      {
-        input: 'nums = [3,3], target = 6',
-        output: '[0,1]',
-      },
-    ],
-    constraints: [
-      '2 <= nums.length <= 10^4',
-      '-10^9 <= nums[i] <= 10^9',
-      '-10^9 <= target <= 10^9',
-      'Only one valid answer exists.',
-    ],
-    starterCode: {
-      typescript: `function twoSum(nums: number[], target: number): number[] {
-  // Write your code here
-  return [];
-}`,
-      python: `class Solution:
-    def twoSum(self, nums: list[int], target: int) -> list[int]:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        // Write your code here
-        return {};
-    }
-};`,
-      java: `class Solution {
-    public int[] twoSum(int[] nums, int target) {
-        // Write your code here
-        return new int[]{};
-    }
-}`,
-    },
-  },
-  {
-    id: '2',
-    slug: 'valid-parentheses',
-    title: 'Valid Parentheses',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #20',
-    platformUrl: 'https://leetcode.com/problems/valid-parentheses/',
-    difficulty: 'Easy',
-    category: 'Stacks & Queues',
-    acceptance: '41.5%',
-    solved: false,
-    companies: ['Amazon', 'Google', 'Meta', 'Microsoft', 'Bloomberg'],
-    description:
-      'Given a string s containing just the characters "(", ")", "{", "}", "[" and "]", determine if the input string is valid. Open brackets must be closed by the same type of brackets and in the correct order. Every close bracket must have a corresponding open bracket of the same type.',
-    examples: [
-      {
-        input: 's = "()"',
-        output: 'true',
-      },
-      {
-        input: 's = "()[]{}"',
-        output: 'true',
-      },
-      {
-        input: 's = "(]"',
-        output: 'false',
-      },
-    ],
-    constraints: [
-      '1 <= s.length <= 10^4',
-      's consists of parentheses only: "()[]{}"',
-    ],
-    starterCode: {
-      typescript: `function isValid(s: string): boolean {
-  // Write your code here
-  return false;
-}`,
-      python: `class Solution:
-    def isValid(self, s: str) -> bool:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    bool isValid(string s) {
-        // Write your code here
-        return false;
-    }
-};`,
-      java: `class Solution {
-    public boolean isValid(String s) {
-        // Write your code here
-        return false;
-    }
-}`,
-    },
-  },
-  {
-    id: '3',
-    slug: 'merge-two-sorted-lists',
-    title: 'Merge Two Sorted Lists',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #21',
-    platformUrl: 'https://leetcode.com/problems/merge-two-sorted-lists/',
-    difficulty: 'Easy',
-    category: 'Linked Lists',
-    acceptance: '64.1%',
-    solved: false,
-    companies: ['Amazon', 'Apple', 'Microsoft', 'Google'],
-    description:
-      'You are given the heads of two sorted linked lists list1 and list2. Merge the two lists into one sorted list. The list should be made by splicing together the nodes of the first two lists. Return the head of the merged linked list.',
-    examples: [
-      {
-        input: 'list1 = [1,2,4], list2 = [1,3,4]',
-        output: '[1,1,2,3,4,4]',
-      },
-      {
-        input: 'list1 = [], list2 = []',
-        output: '[]',
-      },
-    ],
-    constraints: [
-      'The number of nodes in both lists is in the range [0, 50].',
-      '-100 <= Node.val <= 100',
-      'Both list1 and list2 are sorted in non-decreasing order.',
-    ],
-    starterCode: {
-      typescript: `/**
- * Definition for singly-linked list.
- * class ListNode {
- *     val: number
- *     next: ListNode | null
- *     constructor(val?: number, next?: ListNode | null) {
- *         this.val = (val===undefined ? 0 : val)
- *         this.next = (next===undefined ? null : next)
- *     }
- * }
- */
-
-function mergeTwoLists(list1: ListNode | null, list2: ListNode | null): ListNode | null {
-  // Write your code here
-  return null;
-}`,
-      python: `# Definition for singly-linked list.
-# class ListNode:
-#     def __init__(self, val=0, next=None):
-#         self.val = val
-#         self.next = next
-class Solution:
-    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:
-        # Write your code here
-        pass`,
-      cpp: `/**
- * Definition for singly-linked list.
- * struct ListNode {
- *     int val;
- *     ListNode *next;
- *     ListNode() : val(0), next(nullptr) {}
- *     ListNode(int x) : val(x), next(nullptr) {}
- *     ListNode(int x, ListNode *next) : val(x), next(next) {}
- * };
- */
-class Solution {
-public:
-    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {
-        // Write your code here
-        return nullptr;
-    }
-};`,
-      java: `/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode() {}
- *     ListNode(int val) { this.val = val; }
- *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
- * }
- */
-class Solution {
-    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {
-        // Write your code here
-        return null;
-    }
-}`,
-    },
-  },
-  {
-    id: '4',
-    slug: 'best-time-to-buy-and-sell-stock',
-    title: 'Best Time to Buy and Sell Stock',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #121',
-    platformUrl: 'https://leetcode.com/problems/best-time-to-buy-and-sell-stock/',
-    difficulty: 'Easy',
-    category: 'Arrays & Sliding Window',
-    acceptance: '54.2%',
-    solved: false,
-    companies: ['Amazon', 'Meta', 'Microsoft', 'Google', 'Bloomberg'],
-    description:
-      'You are given an array prices where prices[i] is the price of a given stock on the ith day. You want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock. Return the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return 0.',
-    examples: [
-      {
-        input: 'prices = [7,1,5,3,6,4]',
-        output: '5',
-        explanation: 'Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5.',
-      },
-      {
-        input: 'prices = [7,6,4,3,1]',
-        output: '0',
-        explanation: 'In this case, no transactions are done and the max profit = 0.',
-      },
-    ],
-    constraints: [
-      '1 <= prices.length <= 10^5',
-      '0 <= prices[i] <= 10^4',
-    ],
-    starterCode: {
-      typescript: `function maxProfit(prices: number[]): number {
-  // Write your code here
-  return 0;
-}`,
-      python: `class Solution:
-    def maxProfit(self, prices: list[int]) -> int:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    int maxProfit(vector<int>& prices) {
-        // Write your code here
-        return 0;
-    }
-};`,
-      java: `class Solution {
-    public int maxProfit(int[] prices) {
-        // Write your code here
-        return 0;
-    }
-}`,
-    },
-  },
-  {
-    id: '5',
-    slug: 'longest-substring-without-repeating-characters',
-    title: 'Longest Substring Without Repeating Characters',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #3',
-    platformUrl: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/',
-    difficulty: 'Medium',
-    category: 'Sliding Window',
-    acceptance: '34.8%',
-    solved: false,
-    companies: ['Amazon', 'Google', 'Meta', 'Microsoft', 'Bloomberg', 'Apple'],
-    description:
-      'Given a string s, find the length of the longest substring without duplicate characters.',
-    examples: [
-      {
-        input: 's = "abcabcbb"',
-        output: '3',
-        explanation: 'The answer is "abc", with the length of 3.',
-      },
-      {
-        input: 's = "bbbbb"',
-        output: '1',
-        explanation: 'The answer is "b", with the length of 1.',
-      },
-      {
-        input: 's = "pwwkew"',
-        output: '3',
-        explanation: 'The answer is "wke", with the length of 3.',
-      },
-    ],
-    constraints: [
-      '0 <= s.length <= 5 * 10^4',
-      's consists of English letters, digits, symbols and spaces.',
-    ],
-    starterCode: {
-      typescript: `function lengthOfLongestSubstring(s: string): number {
-  // Write your code here
-  return 0;
-}`,
-      python: `class Solution:
-    def lengthOfLongestSubstring(self, s: str) -> int:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    int lengthOfLongestSubstring(string s) {
-        // Write your code here
-        return 0;
-    }
-};`,
-      java: `class Solution {
-    public int lengthOfLongestSubstring(String s) {
-        // Write your code here
-        return 0;
-    }
-}`,
-    },
-  },
-  {
-    id: '6',
-    slug: 'coin-change',
-    title: 'Coin Change (Min Coins)',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #322',
-    platformUrl: 'https://leetcode.com/problems/coin-change/',
-    difficulty: 'Medium',
-    category: 'Dynamic Programming',
-    acceptance: '42.8%',
-    solved: false,
-    companies: ['Amazon', 'Microsoft', 'Uber', 'Google', 'Meta'],
-    description:
-      'You are given an integer array coins representing coins of different denominations and an integer amount representing a total amount of money. Return the fewest number of coins that you need to make up that amount. If that amount of money cannot be made up by any combination of the coins, return -1.',
-    examples: [
-      {
-        input: 'coins = [1,2,5], amount = 11',
-        output: '3',
-        explanation: '11 = 5 + 5 + 1 (3 coins)',
-      },
-      {
-        input: 'coins = [2], amount = 3',
-        output: '-1',
-      },
-      {
-        input: 'coins = [1], amount = 0',
-        output: '0',
-      },
-    ],
-    constraints: [
-      '1 <= coins.length <= 12',
-      '1 <= coins[i] <= 2^31 - 1',
-      '0 <= amount <= 10^4',
-    ],
-    starterCode: {
-      typescript: `function coinChange(coins: number[], amount: number): number {
-  // Write your code here
-  return -1;
-}`,
-      python: `class Solution:
-    def coinChange(self, coins: list[int], amount: int) -> int:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    int coinChange(vector<int>& coins, int amount) {
-        // Write your code here
-        return -1;
-    }
-};`,
-      java: `class Solution {
-    public int coinChange(int[] coins, int amount) {
-        // Write your code here
-        return -1;
-    }
-}`,
-    },
-  },
-  {
-    id: '7',
-    slug: 'lru-cache',
-    title: 'LRU Cache Design',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #146',
-    platformUrl: 'https://leetcode.com/problems/lru-cache/',
-    difficulty: 'Medium',
-    category: 'Data Structures & Design',
-    acceptance: '41.2%',
-    solved: false,
-    companies: ['Amazon', 'Google', 'Meta', 'Microsoft', 'Apple', 'Bloomberg', 'Uber'],
-    description:
-      'Design a data structure that follows the constraints of a Least Recently Used (LRU) cache. Implement the LRUCache class with get(key) and put(key, value) in O(1) average time complexity.',
-    examples: [
-      {
-        input: '["LRUCache", "put", "put", "get", "put", "get", "put", "get", "get", "get"]\n[[2], [1, 1], [2, 2], [1], [3, 3], [2], [4, 4], [1], [3], [4]]',
-        output: '[null, null, null, 1, null, -1, null, -1, 3, 4]',
-      },
-    ],
-    constraints: [
-      '1 <= capacity <= 3000',
-      '0 <= key <= 10^4',
-      '0 <= value <= 10^5',
-      'At most 2 * 10^5 calls to get and put.',
-    ],
-    starterCode: {
-      typescript: `class LRUCache {
-  constructor(capacity: number) {
-    // Write your code here
-  }
-
-  get(key: number): number {
-    // Write your code here
-    return -1;
-  }
-
-  put(key: number, value: number): void {
-    // Write your code here
-  }
-}`,
-      python: `class LRUCache:
-    def __init__(self, capacity: int):
-        # Write your code here
-        pass
-
-    def get(self, key: int) -> int:
-        # Write your code here
-        pass
-
-    def put(self, key: int, value: int) -> None:
-        # Write your code here
-        pass`,
-      cpp: `class LRUCache {
-public:
-    LRUCache(int capacity) {
-        // Write your code here
-    }
-    
-    int get(int key) {
-        // Write your code here
-        return -1;
-    }
-    
-    void put(int key, int value) {
-        // Write your code here
-    }
-};`,
-      java: `class LRUCache {
-    public LRUCache(int capacity) {
-        // Write your code here
-    }
-    
-    public int get(int key) {
-        // Write your code here
-        return -1;
-    }
-    
-    public void put(int key, int value) {
-        // Write your code here
-    }
-}`,
-    },
-  },
-  {
-    id: '8',
-    slug: 'number-of-islands',
-    title: 'Number of Islands',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #200',
-    platformUrl: 'https://leetcode.com/problems/number-of-islands/',
-    difficulty: 'Medium',
-    category: 'Graphs & BFS/DFS',
-    acceptance: '58.7%',
-    solved: false,
-    companies: ['Amazon', 'Google', 'Meta', 'Microsoft', 'Bloomberg', 'Uber'],
-    description:
-      'Given an m x n 2D binary grid grid which represents a map of "1"s (land) and "0"s (water), return the number of islands. An island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically.',
-    examples: [
-      {
-        input: 'grid = [["1","1","1","1","0"],["1","1","0","1","0"],["1","1","0","0","0"],["0","0","0","0","0"]]',
-        output: '1',
-      },
-      {
-        input: 'grid = [["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]',
-        output: '3',
-      },
-    ],
-    constraints: [
-      'm == grid.length',
-      'n == grid[i].length',
-      '1 <= m, n <= 300',
-      'grid[i][j] is "0" or "1".',
-    ],
-    starterCode: {
-      typescript: `function numIslands(grid: string[][]): number {
-  // Write your code here
-  return 0;
-}`,
-      python: `class Solution:
-    def numIslands(self, grid: list[list[str]]) -> int:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    int numIslands(vector<vector<char>>& grid) {
-        // Write your code here
-        return 0;
-    }
-};`,
-      java: `class Solution {
-    public int numIslands(char[][] grid) {
-        // Write your code here
-        return 0;
-    }
-}`,
-    },
-  },
-  {
-    id: '9',
-    slug: 'kth-largest-element-in-an-array',
-    title: 'Kth Largest Element in an Array',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #215',
-    platformUrl: 'https://leetcode.com/problems/kth-largest-element-in-an-array/',
-    difficulty: 'Medium',
-    category: 'Heaps & Quickselect',
-    acceptance: '67.3%',
-    solved: false,
-    companies: ['Meta', 'Amazon', 'Microsoft', 'Google', 'Apple'],
-    description:
-      'Given an integer array nums and an integer k, return the kth largest element in the array. Note that it is the kth largest element in the sorted order, not the kth distinct element. Can you solve it without sorting in O(n) time?',
-    examples: [
-      {
-        input: 'nums = [3,2,1,5,6,4], k = 2',
-        output: '5',
-      },
-      {
-        input: 'nums = [3,2,3,1,2,4,5,5,6], k = 4',
-        output: '4',
-      },
-    ],
-    constraints: [
-      '1 <= k <= nums.length <= 10^5',
-      '-10^4 <= nums[i] <= 10^4',
-    ],
-    starterCode: {
-      typescript: `function findKthLargest(nums: number[], k: number): number {
-  // Write your code here
-  return 0;
-}`,
-      python: `class Solution:
-    def findKthLargest(self, nums: list[int], k: int) -> int:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    int findKthLargest(vector<int>& nums, int k) {
-        // Write your code here
-        return 0;
-    }
-};`,
-      java: `class Solution {
-    public int findKthLargest(int[] nums, int k) {
-        // Write your code here
-        return 0;
-    }
-}`,
-    },
-  },
-  {
-    id: '10',
-    slug: 'trapping-rain-water',
-    title: 'Trapping Rain Water',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #42',
-    platformUrl: 'https://leetcode.com/problems/trapping-rain-water/',
-    difficulty: 'Hard',
-    category: 'Two Pointers & Monotonic Stack',
-    acceptance: '60.9%',
-    solved: false,
-    companies: ['Google', 'Amazon', 'Meta', 'Microsoft', 'Apple', 'Goldman Sachs'],
-    description:
-      'Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.',
-    examples: [
-      {
-        input: 'height = [0,1,0,2,1,0,1,3,2,1,2,1]',
-        output: '6',
-        explanation: 'The above elevation map is represented by array [0,1,0,2,1,0,1,3,2,1,2,1]. In this case, 6 units of rain water are trapped.',
-      },
-      {
-        input: 'height = [4,2,0,3,2,5]',
-        output: '9',
-      },
-    ],
-    constraints: [
-      'n == height.length',
-      '1 <= n <= 2 * 10^4',
-      '0 <= height[i] <= 10^5',
-    ],
-    starterCode: {
-      typescript: `function trap(height: number[]): number {
-  // Write your code here
-  return 0;
-}`,
-      python: `class Solution:
-    def trap(self, height: list[int]) -> int:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    int trap(vector<int>& height) {
-        // Write your code here
-        return 0;
-    }
-};`,
-      java: `class Solution {
-    public int trap(int[] height) {
-        // Write your code here
-        return 0;
-    }
-}`,
-    },
-  },
-  {
-    id: '11',
-    slug: 'merge-k-sorted-lists',
-    title: 'Merge k Sorted Lists',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #23',
-    platformUrl: 'https://leetcode.com/problems/merge-k-sorted-lists/',
-    difficulty: 'Hard',
-    category: 'Divide & Conquer & Heaps',
-    acceptance: '51.8%',
-    solved: false,
-    companies: ['Amazon', 'Meta', 'Google', 'Microsoft', 'Apple', 'Uber'],
-    description:
-      'You are given an array of k linked-lists lists, each linked-list is sorted in ascending order. Merge all the linked-lists into one sorted linked-list and return it.',
-    examples: [
-      {
-        input: 'lists = [[1,4,5],[1,3,4],[2,6]]',
-        output: '[1,1,2,3,4,4,5,6]',
-      },
-      {
-        input: 'lists = []',
-        output: '[]',
-      },
-    ],
-    constraints: [
-      'k == lists.length',
-      '0 <= k <= 10^4',
-      '0 <= lists[i].length <= 500',
-      '-10^4 <= lists[i][j] <= 10^4',
-    ],
-    starterCode: {
-      typescript: `/**
- * Definition for singly-linked list.
- * class ListNode {
- *     val: number
- *     next: ListNode | null
- *     constructor(val?: number, next?: ListNode | null) {
- *         this.val = (val===undefined ? 0 : val)
- *         this.next = (next===undefined ? null : next)
- *     }
- * }
- */
-
-function mergeKLists(lists: Array<ListNode | null>): ListNode | null {
-  // Write your code here
-  return null;
-}`,
-      python: `# Definition for singly-linked list.
-# class ListNode:
-#     def __init__(self, val=0, next=None):
-#         self.val = val
-#         self.next = next
-class Solution:
-    def mergeKLists(self, lists: list[Optional[ListNode]]) -> Optional[ListNode]:
-        # Write your code here
-        pass`,
-      cpp: `/**
- * Definition for singly-linked list.
- * struct ListNode {
- *     int val;
- *     ListNode *next;
- *     ListNode() : val(0), next(nullptr) {}
- *     ListNode(int x) : val(x), next(nullptr) {}
- *     ListNode(int x, ListNode *next) : val(x), next(next) {}
- * };
- */
-class Solution {
-public:
-    ListNode* mergeKLists(vector<ListNode*>& lists) {
-        // Write your code here
-        return nullptr;
-    }
-};`,
-      java: `/**
- * Definition for singly-linked list.
- * public class ListNode {
- *     int val;
- *     ListNode next;
- *     ListNode() {}
- *     ListNode(int val) { this.val = val; }
- *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }
- * }
- */
-class Solution {
-    public ListNode mergeKLists(ListNode[] lists) {
-        // Write your code here
-        return null;
-    }
-}`,
-    },
-  },
-  {
-    id: '12',
-    slug: 'course-schedule',
-    title: 'Course Schedule',
-    platform: 'LeetCode',
-    platformId: 'LeetCode #207',
-    platformUrl: 'https://leetcode.com/problems/course-schedule/',
-    difficulty: 'Medium',
-    category: 'Topological Sort & Graphs',
-    acceptance: '47.1%',
-    solved: false,
-    companies: ['Amazon', 'Google', 'Meta', 'Microsoft'],
-    description:
-      'There are a total of numCourses courses you have to take, labeled from 0 to numCourses - 1. You are given an array prerequisites where prerequisites[i] = [a_i, b_i] indicates that you must take course b_i first if you want to take course a_i. Return true if you can finish all courses. Otherwise, return false.',
-    examples: [
-      {
-        input: 'numCourses = 2, prerequisites = [[1,0]]',
-        output: 'true',
-      },
-      {
-        input: 'numCourses = 2, prerequisites = [[1,0],[0,1]]',
-        output: 'false',
-      },
-    ],
-    constraints: [
-      '1 <= numCourses <= 2000',
-      '0 <= prerequisites.length <= 5000',
-      'prerequisites[i].length == 2',
-    ],
-    starterCode: {
-      typescript: `function canFinish(numCourses: number, prerequisites: number[][]): boolean {
-  // Write your code here
-  return false;
-}`,
-      python: `class Solution:
-    def canFinish(self, numCourses: int, prerequisites: list[list[int]]) -> bool:
-        # Write your code here
-        pass`,
-      cpp: `class Solution {
-public:
-    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {
-        // Write your code here
-        return false;
-    }
-};`,
-      java: `class Solution {
-    public boolean canFinish(int numCourses, int[][] prerequisites) {
-        // Write your code here
-        return false;
-    }
-}`,
-    },
-  },
-  {
-    id: '13',
-    slug: 'way-too-long-words',
-    title: 'Way Too Long Words',
-    platform: 'Codeforces',
-    platformId: 'Codeforces 71A',
-    platformUrl: 'https://codeforces.com/problemset/problem/71/A',
-    difficulty: 'Easy',
-    category: 'Strings',
-    acceptance: '64.8%',
-    solved: false,
-    companies: ['Codeforces Div 2', 'Yandex'],
-    description:
-      'Sometimes some words like "localization" or "internationalization" are so long that their writing is bothersome. Let us consider a word too long if its length is strictly more than 10 characters. Replace the word with an abbreviation: write the first letter, then the number of letters between first and last, and then the last letter.',
-    examples: [
-      {
-        input: 'word = "localization"',
-        output: '"l10n"',
-      },
-      {
-        input: 'word = "internationalization"',
-        output: '"i18n"',
-      },
-    ],
-    constraints: [
-      '1 <= word.length <= 100',
-      'word consists of lowercase Latin letters only',
-    ],
-    starterCode: {
-      typescript: `function abbreviateWord(word: string): string {
-  // Write your code here
-  return "";
-}`,
-      python: `def abbreviate_word(word: str) -> str:
-    # Write your code here
-    pass`,
-      cpp: `string abbreviateWord(string word) {
-    // Write your code here
-    return "";
-}`,
-      java: `class Solution {
-    public static String abbreviateWord(String word) {
-        // Write your code here
-        return "";
-    }
-}`,
-    },
-  },
-  {
-    id: '14',
-    slug: 'castle-on-the-grid',
-    title: 'Castle on the Grid',
-    platform: 'HackerRank',
-    platformId: 'HackerRank #BFS',
-    platformUrl: 'https://www.hackerrank.com/challenges/castle-on-the-grid/problem',
-    difficulty: 'Medium',
-    category: 'Graph Traversal / BFS',
-    acceptance: '52.1%',
-    solved: false,
-    companies: ['HackerRank', 'Goldman Sachs'],
-    description:
-      'You are given a square grid with some cells open (.) and other cells blocked (X). Your castle can move along any row or column in one step until blocked. Return the minimum number of steps to reach the destination.',
-    examples: [
-      {
-        input: 'grid = [".X.", ".X.", "..."], start = (0, 0), goal = (0, 2)',
-        output: '3',
-      },
-    ],
-    constraints: [
-      '1 <= n <= 100',
-      'grid contains only "." and "X"',
-    ],
-    starterCode: {
-      typescript: `function minimumMoves(grid: string[], startX: number, startY: number, goalX: number, goalY: number): number {
-  // Write your code here
-  return -1;
-}`,
-      python: `def minimumMoves(grid: list[str], startX: int, startY: int, goalX: int, goalY: int) -> int:
-    # Write your code here
-    pass`,
-      cpp: `int minimumMoves(vector<string> grid, int startX, int startY, int goalX, int goalY) {
-    // Write your code here
-    return -1;
-}`,
-      java: `class Solution {
-    public static int minimumMoves(List<String> grid, int startX, int startY, int goalX, int goalY) {
-        // Write your code here
-        return -1;
-    }
-}`,
-    },
-  },
-];
+// Initial problem catalog
+const baseProblemsCatalog: Problem[] = curatedProblemsCatalog as Problem[];
 
 export default function ProblemsPage() {
-  const [problems, setProblems] = useState<Problem[]>(problemsData);
+  const [problems, setProblems] = useState<Problem[]>(baseProblemsCatalog);
+  const [isLoadingLive, setIsLoadingLive] = useState(false);
+  const [timeframe, setTimeframe] = useState<'30days' | 'all'>('30days');
   const [search, setSearch] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
   const [selectedCompany, setSelectedCompany] = useState<string>('All');
@@ -1081,6 +228,90 @@ export default function ProblemsPage() {
       }
     }
   }, []);
+
+  // Pull problems dynamically from the company archives whenever company, timeframe, or difficulty changes
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function pullProblemsOnDemand() {
+      setIsLoadingLive(true);
+      try {
+        const queryParams = new URLSearchParams({
+          company: selectedCompany,
+          timeframe,
+          limit: '150',
+        });
+        if (selectedDifficulty !== 'All') {
+          queryParams.set('difficulty', selectedDifficulty);
+        }
+
+        const res = await fetch(`/api/problems?${queryParams.toString()}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.problems) && json.problems.length > 0) {
+            if (!isCancelled) {
+              const savedSolved = localStorage.getItem('mergegrid_solved_problems');
+              const solvedIds: string[] = savedSolved ? JSON.parse(savedSolved) : [];
+
+              const liveList: Problem[] = json.problems.map((p: Problem) => ({
+                ...p,
+                solved: solvedIds.includes(p.id) || solvedIds.includes(p.slug),
+              }));
+
+              // Merge Supabase custom community problems
+              try {
+                const supabase = createClient();
+                const { data: dbData } = await supabase
+                  .from('custom_problems')
+                  .select('*')
+                  .order('created_at', { ascending: false });
+
+                if (dbData && dbData.length > 0) {
+                  const dbProblems: Problem[] = dbData.map((item) => ({
+                    id: item.id,
+                    slug: item.slug,
+                    title: item.title,
+                    platform: 'LeetCode',
+                    platformId: `Community #${item.id.slice(-4)}`,
+                    platformUrl: `https://leetcode.com/problemset/all/?search=${encodeURIComponent(item.title)}`,
+                    difficulty: item.difficulty,
+                    category: item.category,
+                    acceptance: item.acceptance || '54%',
+                    solved: solvedIds.includes(item.id),
+                    companies: item.companies || ['Community'],
+                    description: item.description,
+                    examples: item.examples || [],
+                    constraints: item.constraints || [],
+                    starterCode: item.starter_code || {},
+                  }));
+
+                  const liveSlugs = new Set(liveList.map((p) => p.slug));
+                  setProblems([...dbProblems.filter((p) => !liveSlugs.has(p.slug)), ...liveList]);
+                  return;
+                }
+              } catch {
+                // Ignore
+              }
+
+              setProblems(liveList);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error pulling live problems on demand:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingLive(false);
+        }
+      }
+    }
+
+    pullProblemsOnDemand();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedCompany, timeframe, selectedDifficulty]);
 
 function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): string {
   if (problem.starterCode && problem.starterCode[lang]) {
@@ -1440,7 +671,32 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
   const mediumSolved = problems.filter((p) => p.difficulty === 'Medium' && p.solved).length;
   const hardSolved = problems.filter((p) => p.difficulty === 'Hard' && p.solved).length;
 
-  const companiesList = ['All', 'Google', 'Amazon', 'Meta', 'Microsoft', 'Apple', 'Uber', 'Bloomberg'];
+  const companiesList = [
+    'All',
+    'Google',
+    'Amazon',
+    'Meta',
+    'Microsoft',
+    'Apple',
+    'Bloomberg',
+    'Uber',
+    'Netflix',
+    'LinkedIn',
+    'Adobe',
+    'Goldman Sachs',
+    'Salesforce',
+    'Oracle',
+    'Cisco',
+    'PayPal',
+    'Walmart Global Tech',
+    'ByteDance',
+    'DE Shaw',
+    'Atlassian',
+    'Stripe',
+    'Nvidia',
+    'Twitter',
+    'Airbnb',
+  ];
 
   const filtered = problems.filter((p) => {
     const matchesSearch =
@@ -1465,19 +721,17 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2.5">
             Problem Arena
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold border border-brand-200">
-              LeetCode Company-Wise
+              Company-Wise Tracks
             </span>
+            {isLoadingLive && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-brand-600 font-medium animate-pulse ml-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pulling live questions...
+              </span>
+            )}
           </h1>
           <p className="text-sm text-neutral-500 mt-1 flex items-center gap-2 flex-wrap">
-            <span>Sourced from</span>
-            <a
-              href="https://github.com/liquidslr/leetcode-company-wise-problems"
-              target="_blank"
-              rel="noreferrer"
-              className="text-brand-600 hover:text-brand-700 underline font-medium inline-flex items-center gap-1"
-            >
-              liquidslr/leetcode-company-wise-problems <ExternalLink className="w-3 h-3" />
-            </a>
+            <span>Verified company tracks</span>
+            <span>• High-frequency interview archives</span>
             <span>• Live LeetCode submit &amp; GitHub commit sync</span>
           </p>
         </div>
@@ -1546,24 +800,50 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
         </Card>
       </div>
 
-      {/* Company Tag Filter Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-xs font-semibold text-neutral-500 shrink-0 flex items-center gap-1">
-          <Building2 className="w-3.5 h-3.5" /> Company:
-        </span>
-        {companiesList.map((comp) => (
+      {/* Company Tag Filter Bar & Timeframe Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50/70 p-2.5 rounded-2xl border border-neutral-200/80">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
+          <span className="text-xs font-semibold text-neutral-600 shrink-0 flex items-center gap-1 pl-1">
+            <Building2 className="w-3.5 h-3.5 text-neutral-500" /> Company:
+          </span>
+          {companiesList.map((comp) => (
+            <button
+              key={comp}
+              onClick={() => setSelectedCompany(comp)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                selectedCompany === comp
+                  ? 'bg-neutral-900 text-white shadow-sm'
+                  : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              {comp}
+            </button>
+          ))}
+        </div>
+
+        {/* Timeframe switch */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl shrink-0 self-start sm:self-auto border border-neutral-200 shadow-xs">
           <button
-            key={comp}
-            onClick={() => setSelectedCompany(comp)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              selectedCompany === comp
-                ? 'bg-neutral-900 text-white shadow-sm'
-                : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+            onClick={() => setTimeframe('30days')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              timeframe === '30days'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
-            {comp}
+            🔥 30-Day Trending
           </button>
-        ))}
+          <button
+            onClick={() => setTimeframe('all')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              timeframe === 'all'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-500 hover:text-neutral-900'
+            }`}
+          >
+            📚 All-Time Track
+          </button>
+        </div>
       </div>
 
       {/* Platform & Difficulty Filters */}
