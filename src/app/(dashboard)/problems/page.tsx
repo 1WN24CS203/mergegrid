@@ -26,6 +26,10 @@ import {
   Share2,
   Loader2,
   RefreshCw,
+  AlertCircle,
+  AlertTriangle,
+  Lightbulb,
+  Info,
 } from 'lucide-react';
 import { Github } from '@/components/ui/icons';
 import { Card } from '@/components/ui/card';
@@ -36,6 +40,7 @@ import { useToast } from '@/components/ui/toast';
 import { ProposeProblemModal, ProposedProblemData } from '@/components/problems/propose-problem-modal';
 import { createClient } from '@/lib/supabase/client';
 import { curatedProblemsCatalog, Problem as CatalogProblem } from '@/lib/problems-data';
+import { evaluateCode, EvaluationResult, CodeDiagnostic } from '@/lib/code-evaluator';
 
 type SupportedLanguage =
   | 'c'
@@ -111,13 +116,7 @@ export default function ProblemsPage() {
   const [userCode, setUserCode] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmittingPlatform, setIsSubmittingPlatform] = useState(false);
-  const [runOutput, setRunOutput] = useState<{
-    status: 'success' | 'error' | 'pending';
-    runtime?: string;
-    memory?: string;
-    casesPassed?: string;
-    message?: string;
-  } | null>(null);
+  const [runOutput, setRunOutput] = useState<EvaluationResult | null>(null);
 
   // Platform and GitHub Sync Configuration
   const [showSyncConfig, setShowSyncConfig] = useState(false);
@@ -409,24 +408,35 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     }
   };
 
-  // Execute sandboxed test run
+  // Execute sandboxed test run with multi-language deep error diagnostics
   const handleRunCode = () => {
+    if (!activeProblem) return;
     setIsRunning(true);
     setRunOutput(null);
+
     setTimeout(() => {
+      const result = evaluateCode(userCode, selectedLang, {
+        title: activeProblem.title,
+        examples: activeProblem.examples,
+      });
+
       setIsRunning(false);
-      setRunOutput({
-        status: 'success',
-        runtime: `${Math.floor(Math.random() * 25 + 30)}ms`,
-        memory: `${(Math.random() * 4 + 40).toFixed(1)}MB`,
-        casesPassed: 'Passed 14/14 Sample & Hidden Test Cases',
-      });
-      toast({
-        type: 'success',
-        title: 'Tests Passed',
-        message: 'Your code compiled and passed all test cases!',
-      });
-    }, 600);
+      setRunOutput(result);
+
+      if (result.status === 'success') {
+        toast({
+          type: 'success',
+          title: 'Tests Passed 🎉',
+          message: result.casesPassed || 'Your code compiled and passed all validation tests!',
+        });
+      } else {
+        toast({
+          type: 'error',
+          title: `${result.errorDetails?.type || 'Error'}: Line ${result.errorDetails?.line || 1}`,
+          message: result.errorDetails?.message || 'Code evaluation failed. Review the details below.',
+        });
+      }
+    }, 350);
   };
 
   // Save Credentials & Targets
@@ -1180,18 +1190,129 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                   />
                 </div>
 
-                {/* Execution Output Box */}
+                {/* Execution Output Console */}
                 {runOutput && (
-                  <div className="border-t border-neutral-800 bg-[#161b22] p-4 text-xs font-mono shrink-0 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4" /> {runOutput.casesPassed}
-                      </span>
-                      <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
-                        <span>Runtime: <strong className="text-neutral-200">{runOutput.runtime}</strong></span>
-                        <span>Memory: <strong className="text-neutral-200">{runOutput.memory}</strong></span>
+                  <div className="border-t border-neutral-800 bg-[#161b22] p-4 text-xs font-mono shrink-0 max-h-72 overflow-y-auto space-y-3">
+                    {runOutput.status === 'success' ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {runOutput.casesPassed}
+                          </span>
+                          <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
+                            <span>
+                              Runtime: <strong className="text-neutral-200">{runOutput.runtime}</strong>
+                            </span>
+                            <span>
+                              Memory: <strong className="text-neutral-200">{runOutput.memory}</strong>
+                            </span>
+                          </div>
+                        </div>
+                        {runOutput.message && (
+                          <p className="text-neutral-300 text-[11px] leading-relaxed">
+                            {runOutput.message}
+                          </p>
+                        )}
                       </div>
-                    </div>
+                    ) : (
+                      /* Rich Error Details irrespective of language */
+                      <div className="space-y-3">
+                        {/* Error Header & Location */}
+                        <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              {runOutput.errorDetails?.type || 'Error'}
+                            </span>
+                            {runOutput.errorDetails?.line && (
+                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-800 text-neutral-300 border border-neutral-700">
+                                Line {runOutput.errorDetails.line}
+                                {runOutput.errorDetails.column ? `, Col ${runOutput.errorDetails.column}` : ''}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setRunOutput(null)}
+                            className="text-neutral-500 hover:text-neutral-300 text-xs px-1 cursor-pointer"
+                            title="Dismiss Output"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Raw Compiler / Runtime Message */}
+                        <div className="text-rose-400 font-semibold text-xs leading-relaxed flex items-start gap-1.5">
+                          <span className="select-none">▸</span>
+                          <span>{runOutput.errorDetails?.message}</span>
+                        </div>
+
+                        {/* Offending Code Snippet with Pointer */}
+                        {runOutput.errorDetails?.offendingLine && (
+                          <div className="bg-[#0d1117] rounded-lg p-3 border border-neutral-800 overflow-x-auto">
+                            <div className="text-neutral-500 text-[11px] mb-1">Source context:</div>
+                            <div className="text-neutral-200 whitespace-pre">
+                              <span className="text-neutral-500 select-none mr-2">
+                                {runOutput.errorDetails.line ? `${runOutput.errorDetails.line} | ` : '> '}
+                              </span>
+                              {runOutput.errorDetails.offendingLine}
+                            </div>
+                            {runOutput.errorDetails.pointer && (
+                              <div className="text-rose-400 font-bold whitespace-pre">
+                                <span className="text-transparent select-none mr-2">
+                                  {runOutput.errorDetails.line ? `${runOutput.errorDetails.line} | ` : '> '}
+                                </span>
+                                {runOutput.errorDetails.pointer}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Clear Plain-English Explanation */}
+                        {runOutput.errorDetails?.explanation && (
+                          <div className="bg-neutral-800/60 rounded-lg p-2.5 border border-neutral-700/60 text-[11px] space-y-1">
+                            <div className="text-amber-400 font-semibold flex items-center gap-1">
+                              <Info className="w-3.5 h-3.5" /> Why this occurred:
+                            </div>
+                            <p className="text-neutral-300 leading-relaxed pl-4 font-sans text-xs">
+                              {runOutput.errorDetails.explanation}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Actionable Fix Suggestion */}
+                        {runOutput.errorDetails?.suggestion && (
+                          <div className="bg-brand-950/40 rounded-lg p-2.5 border border-brand-800/40 text-[11px] space-y-1">
+                            <div className="text-brand-300 font-semibold flex items-center gap-1">
+                              <Lightbulb className="w-3.5 h-3.5" /> How to fix:
+                            </div>
+                            <p className="text-neutral-200 leading-relaxed pl-4 font-sans text-xs">
+                              {runOutput.errorDetails.suggestion}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Failed Test Case Comparison (if Wrong Answer) */}
+                        {runOutput.errorDetails?.testCase && (
+                          <div className="bg-[#0d1117] rounded-lg p-3 border border-neutral-800 text-[11px] space-y-1.5">
+                            <div className="text-neutral-400 font-bold text-xs uppercase tracking-wider mb-1">
+                              Test Case Evaluation
+                            </div>
+                            <div className="text-neutral-300">
+                              <span className="text-neutral-500">Input: </span>
+                              <span className="text-neutral-200">{runOutput.errorDetails.testCase.input}</span>
+                            </div>
+                            <div className="text-emerald-400">
+                              <span className="text-neutral-500">Expected: </span>
+                              <span>{runOutput.errorDetails.testCase.expected}</span>
+                            </div>
+                            <div className="text-rose-400">
+                              <span className="text-neutral-500">Actual Output: </span>
+                              <span>{runOutput.errorDetails.testCase.actual}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
