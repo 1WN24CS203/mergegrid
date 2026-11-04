@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   CheckCircle2,
@@ -12,11 +12,33 @@ import {
   ArrowRight,
   ShieldCheck,
   RefreshCw,
+  Terminal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
+
+export type ProblemLanguage =
+  | 'c'
+  | 'cpp'
+  | 'java'
+  | 'python'
+  | 'typescript'
+  | 'javascript'
+  | 'go'
+  | 'rust';
+
+export const ALL_LANGUAGES: { key: ProblemLanguage; label: string; badge: string }[] = [
+  { key: 'c', label: 'C (C17)', badge: 'C' },
+  { key: 'cpp', label: 'C++ (20)', badge: 'C++' },
+  { key: 'java', label: 'Java 21', badge: 'Java' },
+  { key: 'python', label: 'Python 3.12', badge: 'Python' },
+  { key: 'typescript', label: 'TypeScript', badge: 'TS' },
+  { key: 'javascript', label: 'JavaScript', badge: 'JS' },
+  { key: 'go', label: 'Go (1.22)', badge: 'Go' },
+  { key: 'rust', label: 'Rust (1.76)', badge: 'Rust' },
+];
 
 export interface ProposedProblemData {
   id: string;
@@ -37,12 +59,7 @@ export interface ProposedProblemData {
     explanation?: string;
   }[];
   constraints: string[];
-  starterCode: {
-    typescript: string;
-    python: string;
-    cpp: string;
-    java: string;
-  };
+  starterCode: Record<string, string>;
 }
 
 interface ProposeProblemModalProps {
@@ -50,6 +67,32 @@ interface ProposeProblemModalProps {
   onClose: () => void;
   existingTitles: string[];
   onProblemApproved: (problem: ProposedProblemData) => void;
+}
+
+function generateDefaultTemplates(title: string): Record<ProblemLanguage, string> {
+  const fnName =
+    title
+      .trim()
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .split(' ')
+      .filter(Boolean)
+      .map((word, index) =>
+        index === 0
+          ? word.toLowerCase()
+          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      )
+      .join('') || 'solve';
+
+  return {
+    c: `/**\n * Solution for ${title || 'Challenge'}\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* ${fnName}(int* nums, int numsSize, int* returnSize) {\n    // Write your solution here\n    *returnSize = 0;\n    return NULL;\n}`,
+    cpp: `class Solution {\npublic:\n    int ${fnName}(vector<int>& nums) {\n        // Write your solution here\n        return 0;\n    }\n};`,
+    java: `class Solution {\n    public int ${fnName}(int[] nums) {\n        // Write your solution here\n        return 0;\n    }\n}`,
+    python: `class Solution:\n    def ${fnName}(self, nums: list[int]) -> int:\n        # Write your solution here\n        pass`,
+    typescript: `function ${fnName}(nums: number[]): number {\n  // Write your solution here\n  return 0;\n}`,
+    javascript: `/**\n * @param {number[]} nums\n * @return {number}\n */\nvar ${fnName} = function(nums) {\n  // Write your solution here\n  return 0;\n};`,
+    go: `package main\n\nfunc ${fnName}(nums []int) int {\n    // Write your solution here\n    return 0\n}`,
+    rust: `impl Solution {\n    pub fn ${fnName}(nums: Vec<i32>) -> i32 {\n        // Write your solution here\n        0\n    }\n}`,
+  };
 }
 
 export function ProposeProblemModal({
@@ -67,6 +110,12 @@ export function ProposeProblemModal({
   const [sampleOutput, setSampleOutput] = useState('');
   const [constraints, setConstraints] = useState('1 <= n <= 10^5, time complexity target O(n)');
 
+  // Starter Code across all 8 languages
+  const [activeLangTab, setActiveLangTab] = useState<ProblemLanguage>('c');
+  const [starterCodes, setStarterCodes] = useState<Record<ProblemLanguage, string>>(() =>
+    generateDefaultTemplates('')
+  );
+
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewResult, setReviewResult] = useState<{
     decision: 'APPROVED' | 'NEEDS_REVISION' | 'DUPLICATE';
@@ -79,17 +128,45 @@ export function ProposeProblemModal({
     };
     strengths: string[];
     recommendations: string[];
-    starterCode: {
-      typescript: string;
-      python: string;
-      cpp: string;
-      java: string;
-    };
+    starterCode?: Record<string, string>;
   } | null>(null);
 
   const { toast } = useToast();
 
+  // Auto-refresh starter templates when title changes if user hasn't heavily modified them
+  useEffect(() => {
+    if (title.trim()) {
+      setStarterCodes((prev) => {
+        const generated = generateDefaultTemplates(title);
+        const updated = { ...prev };
+        for (const lang of Object.keys(generated) as ProblemLanguage[]) {
+          // If code is still default/empty, update it with new function name
+          if (!updated[lang] || updated[lang].includes('solve') || updated[lang].includes('Challenge')) {
+            updated[lang] = generated[lang];
+          }
+        }
+        return updated;
+      });
+    }
+  }, [title]);
+
   if (!isOpen) return null;
+
+  const handleStarterCodeChange = (lang: ProblemLanguage, code: string) => {
+    setStarterCodes((prev) => ({
+      ...prev,
+      [lang]: code,
+    }));
+  };
+
+  const handleResetLangTemplate = (lang: ProblemLanguage) => {
+    const templates = generateDefaultTemplates(title);
+    setStarterCodes((prev) => ({
+      ...prev,
+      [lang]: templates[lang],
+    }));
+    toast({ type: 'info', title: `Reset ${lang.toUpperCase()} template` });
+  };
 
   const handleRunAiReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +210,15 @@ export function ProposeProblemModal({
       }
 
       setReviewResult(data);
+
+      // If AI generated starter code for all languages, merge it into starterCodes
+      if (data.starterCode) {
+        setStarterCodes((prev) => ({
+          ...prev,
+          ...data.starterCode,
+        }));
+      }
+
       if (data.decision === 'APPROVED') {
         toast({
           type: 'success',
@@ -148,7 +234,7 @@ export function ProposeProblemModal({
       } else {
         toast({
           type: 'info',
-          title: 'Review Complete: Revisions Needed',
+          title: 'Review Complete: Revisions Suggested',
           message: 'Review suggestions below to improve challenge quality.',
         });
       }
@@ -164,8 +250,6 @@ export function ProposeProblemModal({
   };
 
   const handlePublishToArena = () => {
-    if (!reviewResult) return;
-
     const slug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -199,21 +283,21 @@ export function ProposeProblemModal({
         .split('\n')
         .map((c) => c.trim())
         .filter(Boolean),
-      starterCode: reviewResult.starterCode,
+      starterCode: starterCodes,
     };
 
     onProblemApproved(newProblem);
     toast({
       type: 'success',
       title: 'Problem Published to Arena! 🚀',
-      message: `"${newProblem.title}" is now available in your practice arena.`,
+      message: `"${newProblem.title}" with starter templates for 8 languages is now available.`,
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-neutral-200 overflow-hidden flex flex-col max-h-[92vh] animate-scale-in">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-neutral-200 overflow-hidden flex flex-col max-h-[92vh] animate-scale-in">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-gradient-to-r from-neutral-900 to-neutral-800 text-white shrink-0">
           <div className="flex items-center gap-2.5">
@@ -224,11 +308,11 @@ export function ProposeProblemModal({
               <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
                 Propose New Arena Challenge
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-brand-500 text-white">
-                  AI Evaluated
+                  Multi-Language &amp; AI Evaluated
                 </span>
               </h3>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Submit an algorithmic challenge. AI automatically evaluates originality, edge case coverage, and interview impact.
+                Submit an algorithmic challenge with starter code for C, C++, Java, Python, TypeScript, JavaScript, Go, and Rust.
               </p>
             </div>
           </div>
@@ -242,7 +326,8 @@ export function ProposeProblemModal({
 
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <form onSubmit={handleRunAiReview} className="space-y-4">
+          <form onSubmit={handleRunAiReview} className="space-y-5">
+            {/* Title & Difficulty */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="sm:col-span-2">
                 <label className="text-xs font-semibold text-neutral-700 block mb-1">
@@ -263,7 +348,7 @@ export function ProposeProblemModal({
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value as any)}
-                  className="w-full text-sm border border-neutral-300 rounded-lg p-2.5 bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full text-sm border border-neutral-300 rounded-lg p-2.5 bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
                 >
                   <option value="Easy">Easy</option>
                   <option value="Medium">Medium</option>
@@ -272,6 +357,7 @@ export function ProposeProblemModal({
               </div>
             </div>
 
+            {/* Category & Companies */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-neutral-700 block mb-1">
@@ -280,7 +366,7 @@ export function ProposeProblemModal({
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full text-sm border border-neutral-300 rounded-lg p-2.5 bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full text-sm border border-neutral-300 rounded-lg p-2.5 bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
                 >
                   <option value="Arrays & Hashing">Arrays & Hashing</option>
                   <option value="Two Pointers">Two Pointers</option>
@@ -307,6 +393,7 @@ export function ProposeProblemModal({
               </div>
             </div>
 
+            {/* Description */}
             <div>
               <label className="text-xs font-semibold text-neutral-700 block mb-1">
                 Problem Description <span className="text-red-500">*</span>
@@ -314,13 +401,14 @@ export function ProposeProblemModal({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                placeholder="Given an array of integers nums... explain the inputs, what needs to be returned, and boundary conditions."
+                rows={3}
+                placeholder="Given an array of integers nums... explain the inputs, return requirements, and edge cases."
                 className="w-full text-sm border border-neutral-300 rounded-lg p-3 bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none leading-relaxed"
                 required
               />
             </div>
 
+            {/* Sample Test Cases */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-neutral-700 block mb-1">
@@ -347,6 +435,7 @@ export function ProposeProblemModal({
               </div>
             </div>
 
+            {/* Constraints */}
             <div>
               <label className="text-xs font-semibold text-neutral-700 block mb-1">
                 Constraints
@@ -354,14 +443,76 @@ export function ProposeProblemModal({
               <input
                 value={constraints}
                 onChange={(e) => setConstraints(e.target.value)}
-                placeholder="e.g. 1 <= s.length <= 1000, s consists of lowercase letters"
+                placeholder="e.g. 1 <= s.length <= 1000, s consists of lowercase English letters"
                 className="w-full text-xs font-mono border border-neutral-300 rounded-lg p-2.5 bg-neutral-50 text-neutral-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
+            {/* MULTI-LANGUAGE STARTER CODE SECTION */}
+            <div className="border border-neutral-200 rounded-xl bg-neutral-50 overflow-hidden">
+              <div className="p-3 bg-neutral-100/80 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Code2 className="w-4 h-4 text-brand-600" />
+                  <span className="text-xs font-bold text-neutral-900">
+                    Starter Code Templates (All 8 Supported Languages)
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-500">
+                  Switch tabs to customize boilerplate for each language
+                </span>
+              </div>
+
+              {/* Language Tabs Bar */}
+              <div className="flex items-center gap-1 p-2 bg-neutral-100 overflow-x-auto border-b border-neutral-200 scrollbar-none">
+                {ALL_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.key}
+                    type="button"
+                    onClick={() => setActiveLangTab(lang.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      activeLangTab === lang.key
+                        ? 'bg-neutral-900 text-white shadow-sm'
+                        : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <span>{lang.label}</span>
+                    {starterCodes[lang.key] && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active Language Editor */}
+              <div className="p-3 bg-[#0d1117] text-white">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800 text-xs">
+                  <span className="text-neutral-400 font-mono text-[11px]">
+                    Editing {ALL_LANGUAGES.find((l) => l.key === activeLangTab)?.label} starter code
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleResetLangTemplate(activeLangTab)}
+                    className="text-neutral-400 hover:text-white flex items-center gap-1 text-[11px] cursor-pointer transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Reset Template
+                  </button>
+                </div>
+
+                <textarea
+                  value={starterCodes[activeLangTab] || ''}
+                  onChange={(e) => handleStarterCodeChange(activeLangTab, e.target.value)}
+                  rows={7}
+                  spellCheck={false}
+                  className="w-full bg-[#0d1117] text-neutral-100 font-mono text-xs leading-relaxed outline-none resize-y selection:bg-brand-500/40"
+                  placeholder={`// Enter starter code for ${activeLangTab}...`}
+                />
+              </div>
+            </div>
+
+            {/* Review Button */}
             <div className="pt-2 flex items-center justify-between">
               <span className="text-xs text-neutral-400">
-                AI will inspect for duplicates, assess rigor, and generate starter code.
+                AI will inspect for duplicates, assess rigor, and verify all language templates.
               </span>
               <Button
                 type="submit"
@@ -485,10 +636,10 @@ export function ProposeProblemModal({
                 )}
               </div>
 
-              {/* Action */}
+              {/* Publish Action */}
               <div className="pt-2 flex items-center justify-between">
                 <span className="text-xs text-neutral-500">
-                  Starter code for TypeScript, Python, C++, and Java will be auto-attached.
+                  Starter code for all 8 languages will be published with this challenge.
                 </span>
                 <Button
                   onClick={handlePublishToArena}

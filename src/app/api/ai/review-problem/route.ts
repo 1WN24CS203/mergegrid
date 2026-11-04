@@ -129,13 +129,17 @@ export async function POST(request: Request) {
       decision = 'NEEDS_REVISION';
     }
 
-    // 3. AUTO-GENERATE STARTER CODE SIGNATURES
+    // 3. AUTO-GENERATE STARTER CODE SIGNATURES FOR ALL LANGUAGES
     const fnName = toCamelCase(cleanTitle);
     const starterCode = {
-      typescript: `function ${fnName}(input: any): any {\n  // Write your solution here\n  \n  return null;\n}`,
-      python: `class Solution:\n    def ${fnName}(self, input):\n        # Write your solution here\n        pass`,
-      cpp: `class Solution {\npublic:\n    void ${fnName}() {\n        // Write your solution here\n    }\n};`,
-      java: `class Solution {\n    public Object ${fnName}() {\n        // Write your solution here\n        return null;\n    }\n}`,
+      c: `/**\n * Solution for ${cleanTitle}\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* ${fnName}(int* nums, int numsSize, int* returnSize) {\n    // Write your solution here\n    *returnSize = 0;\n    return NULL;\n}`,
+      cpp: `class Solution {\npublic:\n    int ${fnName}(vector<int>& nums) {\n        // Write your solution here\n        return 0;\n    }\n};`,
+      java: `class Solution {\n    public int ${fnName}(int[] nums) {\n        // Write your solution here\n        return 0;\n    }\n}`,
+      python: `class Solution:\n    def ${fnName}(self, nums: list[int]) -> int:\n        # Write your solution here\n        pass`,
+      typescript: `function ${fnName}(nums: number[]): number {\n  // Write your solution here\n  return 0;\n}`,
+      javascript: `/**\n * @param {number[]} nums\n * @return {number}\n */\nvar ${fnName} = function(nums) {\n  // Write your solution here\n  return 0;\n};`,
+      go: `package main\n\nfunc ${fnName}(nums []int) int {\n    // Write your solution here\n    return 0\n}`,
+      rust: `impl Solution {\n    pub fn ${fnName}(nums: Vec<i32>) -> i32 {\n        // Write your solution here\n        0\n    }\n}`,
     };
 
     return NextResponse.json({

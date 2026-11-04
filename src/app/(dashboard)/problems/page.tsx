@@ -33,7 +33,15 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { ProposeProblemModal, ProposedProblemData } from '@/components/problems/propose-problem-modal';
 
-type SupportedLanguage = 'typescript' | 'python' | 'cpp' | 'java';
+type SupportedLanguage =
+  | 'c'
+  | 'cpp'
+  | 'java'
+  | 'python'
+  | 'typescript'
+  | 'javascript'
+  | 'go'
+  | 'rust';
 
 interface Problem {
   id: string;
@@ -54,7 +62,7 @@ interface Problem {
     explanation?: string;
   }[];
   constraints: string[];
-  starterCode: Record<SupportedLanguage, string>;
+  starterCode: Record<string, string>;
 }
 
 interface TestCaseResult {
@@ -1035,10 +1043,54 @@ export default function ProblemsPage() {
     }
   }, []);
 
+function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): string {
+  if (problem.starterCode && problem.starterCode[lang]) {
+    return problem.starterCode[lang];
+  }
+
+  const fnName =
+    problem.title
+      .trim()
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .split(' ')
+      .filter(Boolean)
+      .map((word, index) =>
+        index === 0
+          ? word.toLowerCase()
+          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      )
+      .join('') || 'solve';
+
+  switch (lang) {
+    case 'c':
+      return `/**\n * Solution for ${problem.title}\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* ${fnName}(int* nums, int numsSize, int* returnSize) {\n    // Write your solution here\n    *returnSize = 0;\n    return NULL;\n}`;
+    case 'javascript':
+      if (problem.starterCode?.typescript) {
+        return problem.starterCode.typescript
+          .replace(/:\s*(?:number\[\]|number|string\[\]|string|boolean|void|any|Record<[^>]+>|Array<[^>]+>|ListNode\s*\|\s*null)(?=[,)={;\n])/g, '')
+          .replace(/:\s*[A-Z][a-zA-Z0-9_<>|\s]*(?=[,)={;\n])/g, '');
+      }
+      return `/**\n * @param {any} input\n * @return {any}\n */\nvar ${fnName} = function(input) {\n  // Write your code here\n};`;
+    case 'go':
+      return `package main\n\nfunc ${fnName}() {\n    // Write your code here\n}`;
+    case 'rust':
+      return `impl Solution {\n    pub fn ${fnName}() {\n        // Write your code here\n    }\n}`;
+    case 'cpp':
+      return `class Solution {\npublic:\n    void ${fnName}() {\n        // Write your code here\n    }\n};`;
+    case 'java':
+      return `class Solution {\n    public void ${fnName}() {\n        // Write your code here\n    }\n}`;
+    case 'python':
+      return `class Solution:\n    def ${fnName}(self):\n        # Write your code here\n        pass`;
+    case 'typescript':
+    default:
+      return `function ${fnName}(): any {\n  // Write your code here\n}`;
+  }
+}
+
   // Update starter code when active problem or language changes
   useEffect(() => {
     if (activeProblem) {
-      setUserCode(activeProblem.starterCode[selectedLang] || '');
+      setUserCode(getProblemStarterCode(activeProblem, selectedLang));
       setRunOutput(null);
     }
   }, [activeProblem, selectedLang]);
@@ -1168,10 +1220,14 @@ export default function ProblemsPage() {
     setIsCommitting(true);
 
     const extMap: Record<SupportedLanguage, string> = {
-      typescript: 'ts',
-      python: 'py',
+      c: 'c',
       cpp: 'cpp',
       java: 'java',
+      python: 'py',
+      typescript: 'ts',
+      javascript: 'js',
+      go: 'go',
+      rust: 'rs',
     };
     const ext = extMap[selectedLang];
     const filePath = `solutions/${activeProblem.slug}.${ext}`;
@@ -1717,10 +1773,14 @@ export default function ProblemsPage() {
                       onChange={(e) => setSelectedLang(e.target.value as SupportedLanguage)}
                       className="bg-[#21262d] text-white border border-neutral-700 rounded-md px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
                     >
-                      <option value="typescript">TypeScript 5.4</option>
-                      <option value="python">Python 3.12</option>
+                      <option value="c">C (C17 / GCC)</option>
                       <option value="cpp">C++ 20 (g++)</option>
                       <option value="java">Java 21 (OpenJDK)</option>
+                      <option value="python">Python 3.12</option>
+                      <option value="typescript">TypeScript 5.4</option>
+                      <option value="javascript">JavaScript (Node.js 20)</option>
+                      <option value="go">Go 1.22</option>
+                      <option value="rust">Rust 1.76</option>
                     </select>
                   </div>
 
@@ -1733,7 +1793,7 @@ export default function ProblemsPage() {
                       <Copy className="w-3.5 h-3.5" /> Copy Code
                     </button>
                     <button
-                      onClick={() => setUserCode(activeProblem.starterCode[selectedLang] || '')}
+                      onClick={() => setUserCode(getProblemStarterCode(activeProblem, selectedLang))}
                       className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
                       title="Reset to clean initial code strip"
                     >
