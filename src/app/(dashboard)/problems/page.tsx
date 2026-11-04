@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { ProposeProblemModal, ProposedProblemData } from '@/components/problems/propose-problem-modal';
+import { createClient } from '@/lib/supabase/client';
 
 type SupportedLanguage =
   | 'c'
@@ -984,8 +985,9 @@ export default function ProblemsPage() {
 
   const { toast } = useToast();
 
-  // Load persisted solved problems, query params & credentials
+  // Load persisted solved problems, live Supabase problems, query params & credentials
   useEffect(() => {
+    // 1. Load local custom problems
     try {
       const savedCustom = localStorage.getItem('mergegrid_custom_problems');
       if (savedCustom) {
@@ -1014,9 +1016,6 @@ export default function ProblemsPage() {
 
       const savedUser = localStorage.getItem('mergegrid_github_user');
       if (savedUser) setGithubUser(savedUser);
-      else if (typeof document !== 'undefined' && document.cookie.includes('github')) {
-        setGithubUser('1WN24CS203');
-      }
 
       const savedToken = localStorage.getItem('mergegrid_github_token');
       if (savedToken) setGithubToken(savedToken);
@@ -1029,6 +1028,46 @@ export default function ProblemsPage() {
     } catch {
       // Ignore
     }
+
+    // 2. Fetch live community problems from Supabase database
+    async function fetchLiveCustomProblems() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('custom_problems')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const dbProblems: Problem[] = data.map((item) => ({
+            id: item.id,
+            slug: item.slug,
+            title: item.title,
+            platform: 'LeetCode',
+            platformId: `Community #${item.id.slice(-4)}`,
+            platformUrl: `https://leetcode.com/problemset/all/?search=${encodeURIComponent(item.title)}`,
+            difficulty: item.difficulty,
+            category: item.category,
+            acceptance: item.acceptance || '54%',
+            solved: false,
+            companies: item.companies || ['Community'],
+            description: item.description,
+            examples: item.examples || [],
+            constraints: item.constraints || [],
+            starterCode: item.starter_code || {},
+          }));
+
+          setProblems((prev) => {
+            const customIds = new Set(dbProblems.map((p) => p.id));
+            return [...dbProblems, ...prev.filter((p) => !customIds.has(p.id))];
+          });
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    fetchLiveCustomProblems();
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -1095,8 +1134,41 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     }
   }, [activeProblem, selectedLang]);
 
-  const handleProblemApproved = (newProblem: ProposedProblemData) => {
+  const handleProblemApproved = async (newProblem: ProposedProblemData) => {
     setProblems((prev) => [newProblem as any, ...prev]);
+    setActiveProblem(newProblem as any);
+
+    // 1. Save directly to Supabase Database
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await supabase.from('custom_problems').insert({
+        id: newProblem.id,
+        slug: newProblem.slug,
+        title: newProblem.title,
+        difficulty: newProblem.difficulty,
+        category: newProblem.category,
+        companies: newProblem.companies,
+        description: newProblem.description,
+        examples: newProblem.examples,
+        constraints: newProblem.constraints,
+        starter_code: newProblem.starterCode,
+        acceptance: newProblem.acceptance,
+        author_name:
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email?.split('@')[0] ||
+          'Community Developer',
+        created_by: user?.id || null,
+        impact_score: 85,
+        status: 'approved',
+      });
+    } catch (err) {
+      console.warn('Could not save to Supabase:', err);
+    }
+
+    // 2. Also keep local copy
     try {
       const savedCustom = localStorage.getItem('mergegrid_custom_problems');
       const customList = savedCustom ? JSON.parse(savedCustom) : [];
@@ -1104,7 +1176,6 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     } catch {
       // Ignore
     }
-    setActiveProblem(newProblem as any);
   };
 
   // Execute sandboxed test run
@@ -1335,7 +1406,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     await handleSubmitAndCommit();
   };
 
-  const markProblemSolved = (id: string) => {
+  const markProblemSolved = async (id: string) => {
     const updatedProblems = problems.map((p) =>
       p.id === id ? { ...p, solved: true } : p
     );
@@ -1343,6 +1414,22 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     try {
       const solvedIds = updatedProblems.filter((p) => p.solved).map((p) => p.id);
       localStorage.setItem('mergegrid_solved_problems', JSON.stringify(solvedIds));
+    } catch {
+      // Ignore
+    }
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('user_solved_problems').upsert(
+          {
+            user_id: user.id,
+            problem_id: id,
+          },
+          { onConflict: 'user_id,problem_id' }
+        );
+      }
     } catch {
       // Ignore
     }

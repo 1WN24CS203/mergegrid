@@ -47,12 +47,13 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             display_name: fullName,
+            full_name: fullName,
           },
         },
       });
@@ -60,10 +61,26 @@ export default function RegisterPage() {
       if (error) {
         toast({ type: 'error', title: 'Registration failed', message: error.message });
       } else {
+        if (data?.user) {
+          const username = email.split('@')[0] || `dev_${data.user.id.slice(0, 6)}`;
+          await supabase.from('profiles').upsert(
+            {
+              id: data.user.id,
+              display_name: fullName,
+              username,
+              avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+              college: 'Engineering Guild',
+              reputation_points: 120,
+              problems_solved: 0,
+            },
+            { onConflict: 'id' }
+          );
+        }
+
         toast({
           type: 'success',
           title: 'Account created!',
-          message: 'Check your email to verify your account.',
+          message: 'Account registered successfully. You can now sign in!',
         });
         router.push('/login');
       }

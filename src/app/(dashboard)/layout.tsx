@@ -27,7 +27,44 @@ async function DashboardSessionShell({ children }: { children: React.ReactNode }
           .select('*')
           .eq('id', user.id)
           .single();
-        profile = userProfile;
+
+        if (!userProfile) {
+          const username =
+            user.user_metadata?.user_name ||
+            user.user_metadata?.preferred_username ||
+            user.email?.split('@')[0] ||
+            `dev_${user.id.slice(0, 6)}`;
+          const displayName =
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.user_metadata?.display_name ||
+            username;
+          const avatarUrl =
+            user.user_metadata?.avatar_url ||
+            user.user_metadata?.picture ||
+            `https://github.com/${username}.png`;
+
+          const { data: created } = await supabase
+            .from('profiles')
+            .upsert(
+              {
+                id: user.id,
+                username,
+                display_name: displayName,
+                avatar_url: avatarUrl,
+                github_url: `https://github.com/${username}`,
+                reputation_points: 120,
+                problems_solved: 0,
+              },
+              { onConflict: 'id' }
+            )
+            .select()
+            .single();
+
+          profile = created || userProfile;
+        } else {
+          profile = userProfile;
+        }
       }
     } catch {
       user = null;
