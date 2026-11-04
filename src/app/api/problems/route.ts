@@ -19,12 +19,12 @@ export interface Problem {
     explanation?: string;
   }[];
   constraints: string[];
-  starterCode: Record<string, string>;
+  starterCode?: Record<string, string>;
 }
 
 // In-memory cache for fetched company CSVs to maximize performance
 const csvCache = new Map<string, { timestamp: number; data: string }>();
-const CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
+const CACHE_TTL_MS = 1000 * 60 * 60 * 6; // 6 hours
 
 function parseCSV(text: string): Array<{
   difficulty: string;
@@ -121,56 +121,18 @@ function mapCategory(topics: string): string {
   return 'Algorithms & Data Structures';
 }
 
-function generateStarterCode(title: string, slug: string): Record<string, string> {
-  const words = title
-    .trim()
-    .replace(/[^a-zA-Z0-9 ]/g, '')
-    .split(' ')
-    .filter(Boolean);
-
-  const camelName =
-    words
-      .map((word, index) =>
-        index === 0
-          ? word.toLowerCase()
-          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-      )
-      .join('') || 'solve';
-
-  const pascalName =
-    words
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join('') || 'Solution';
-
-  const snakeName =
-    words
-      .map((word) => word.toLowerCase())
-      .join('_') || 'solve';
-
-  return {
-    c: `/**\n * Solution for ${title}\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* ${camelName}(int* nums, int numsSize, int* returnSize) {\n    // Write your solution here\n    *returnSize = 0;\n    return NULL;\n}`,
-    cpp: `class Solution {\npublic:\n    vector<int> ${camelName}(vector<int>& nums) {\n        // Write your solution here\n        return {};\n    }\n};`,
-    java: `class Solution {\n    public int[] ${camelName}(int[] nums) {\n        // Write your solution here\n        return new int[]{};\n    }\n}`,
-    python: `class Solution:\n    def ${snakeName}(self, nums: list[int]) -> list[int]:\n        # Write your solution here\n        pass`,
-    typescript: `function ${camelName}(nums: number[]): number[] {\n  // Write your solution here\n  return [];\n}`,
-    javascript: `/**\n * @param {number[]} nums\n * @return {number[]}\n */\nvar ${camelName} = function(nums) {\n  // Write your solution here\n  return [];\n};`,
-    go: `package main\n\nfunc ${camelName}(nums []int) []int {\n    // Write your solution here\n    return []int{}\n}`,
-    rust: `impl Solution {\n    pub fn ${snakeName}(nums: Vec<i32>) -> Vec<i32> {\n        // Write your solution here\n        vec![]\n    }\n}`,
-  };
-}
-
-async function fetchCompanyCSV(company: string, timeframe: string = '30days'): Promise<string | null> {
+async function fetchCompanyCSV(company: string, timeframe: string = 'all'): Promise<string | null> {
   const cacheKey = `${company}_${timeframe}`.toLowerCase();
   const cached = csvCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
   }
 
-  // Repository data file URLs
+  // Repository data file URLs: prioritize full catalog
   const fileCandidates =
-    timeframe === 'all'
-      ? ['5.%20All.csv', '1.%20Thirty%20Days.csv', '2.%20Three%20Months.csv']
-      : ['1.%20Thirty%20Days.csv', '5.%20All.csv', '2.%20Three%20Months.csv'];
+    timeframe === '30days'
+      ? ['1.%20Thirty%20Days.csv', '5.%20All.csv', '2.%20Three%20Months.csv']
+      : ['5.%20All.csv', '1.%20Thirty%20Days.csv', '2.%20Three%20Months.csv'];
 
   for (const filename of fileCandidates) {
     const rawUrl = `https://raw.githubusercontent.com/liquidslr/leetcode-company-wise-problems/main/${encodeURIComponent(company)}/${filename}`;
@@ -180,7 +142,7 @@ async function fetchCompanyCSV(company: string, timeframe: string = '30days'): P
           'User-Agent': 'Mozilla/5.0 (MergeGrid Engine)',
           Accept: 'text/plain,text/csv',
         },
-        next: { revalidate: 3600 },
+        next: { revalidate: 86400 },
       });
 
       if (res.ok) {
@@ -229,11 +191,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const companyParam = searchParams.get('company') || 'All';
     const difficultyParam = searchParams.get('difficulty') || 'All';
-    const timeframeParam = searchParams.get('timeframe') || '30days';
+    const timeframeParam = searchParams.get('timeframe') || 'all';
     const searchKeyword = (searchParams.get('search') || '').trim().toLowerCase();
-    const limit = Math.min(Number(searchParams.get('limit')) || 100, 300);
+    const limitParam = searchParams.get('limit');
     const page = Math.max(Number(searchParams.get('page')) || 1, 1);
 
+    // Pull from all top tech leaders when 'All', or the specific requested company
     const companiesToPull =
       companyParam === 'All'
         ? ['Google', 'Amazon', 'Meta', 'Microsoft', 'Apple', 'Bloomberg', 'Uber']
@@ -265,7 +228,6 @@ export async function GET(request: Request) {
         const diff = normalizeDifficulty(row.difficulty);
         const category = mapCategory(row.topics);
         const rawFreq = parseFloat(row.frequency) || 50;
-        // Standardize clean acceptance %
         const acceptance = `${Math.min(Math.max(Math.round(rawFreq * 0.7 + 25), 28), 88)}%`;
 
         const problem: Problem = {
@@ -297,14 +259,21 @@ export async function GET(request: Request) {
             'Time Complexity must be O(N) or O(N log N)',
             'Space Complexity must be O(1) or O(N)',
           ],
-          starterCode: generateStarterCode(row.title, slug),
         };
 
         aggregatedProblems.push(problem);
       }
     }
 
-    // Filter by difficulty
+    // Compute true stats before query filtering
+    const trueStats = {
+      total: aggregatedProblems.length,
+      easy: aggregatedProblems.filter((p) => p.difficulty === 'Easy').length,
+      medium: aggregatedProblems.filter((p) => p.difficulty === 'Medium').length,
+      hard: aggregatedProblems.filter((p) => p.difficulty === 'Hard').length,
+    };
+
+    // Filter by difficulty if requested
     let filtered = aggregatedProblems;
     if (difficultyParam !== 'All') {
       filtered = filtered.filter(
@@ -312,7 +281,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Filter by search keyword
+    // Filter by search keyword if requested
     if (searchKeyword) {
       filtered = filtered.filter(
         (p) =>
@@ -323,17 +292,21 @@ export async function GET(request: Request) {
       );
     }
 
-    // Pagination
-    const total = filtered.length;
-    const startIndex = (page - 1) * limit;
-    const paginated = filtered.slice(startIndex, startIndex + limit);
+    // If limit is specified and not 'all', slice; otherwise return ALL problems!
+    let paginated = filtered;
+    if (limitParam && limitParam !== 'all' && Number(limitParam) > 0) {
+      const limit = Number(limitParam);
+      const startIndex = (page - 1) * limit;
+      paginated = filtered.slice(startIndex, startIndex + limit);
+    }
 
     return NextResponse.json({
       success: true,
-      total,
-      page,
-      limit,
+      total: aggregatedProblems.length,
+      filteredCount: filtered.length,
+      stats: trueStats,
       company: companyParam,
+      timeframe: timeframeParam,
       availableCompanies: TOP_TECH_COMPANIES,
       problems: paginated,
     });
@@ -347,4 +320,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

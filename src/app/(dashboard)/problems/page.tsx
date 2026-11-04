@@ -30,6 +30,9 @@ import {
   AlertTriangle,
   Lightbulb,
   Info,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Github } from '@/components/ui/icons';
 import { Card } from '@/components/ui/card';
@@ -103,7 +106,10 @@ const baseProblemsCatalog: Problem[] = curatedProblemsCatalog as Problem[];
 export default function ProblemsPage() {
   const [problems, setProblems] = useState<Problem[]>(baseProblemsCatalog);
   const [isLoadingLive, setIsLoadingLive] = useState(false);
-  const [timeframe, setTimeframe] = useState<'30days' | 'all'>('30days');
+  const [timeframe, setTimeframe] = useState<'30days' | 'all'>('all');
+  const [trackStats, setTrackStats] = useState<{ total: number; easy: number; medium: number; hard: number } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
   const [search, setSearch] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
   const [selectedCompany, setSelectedCompany] = useState<string>('All');
@@ -228,7 +234,12 @@ export default function ProblemsPage() {
     }
   }, []);
 
-  // Pull problems dynamically from the company archives whenever company, timeframe, or difficulty changes
+  // Reset pagination whenever any filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedPlatform, selectedCompany, selectedDifficulty, timeframe]);
+
+  // Pull problems dynamically from the company archives whenever company or timeframe changes
   useEffect(() => {
     let isCancelled = false;
 
@@ -238,11 +249,8 @@ export default function ProblemsPage() {
         const queryParams = new URLSearchParams({
           company: selectedCompany,
           timeframe,
-          limit: '150',
+          limit: 'all',
         });
-        if (selectedDifficulty !== 'All') {
-          queryParams.set('difficulty', selectedDifficulty);
-        }
 
         const res = await fetch(`/api/problems?${queryParams.toString()}`);
         if (res.ok) {
@@ -256,6 +264,10 @@ export default function ProblemsPage() {
                 ...p,
                 solved: solvedIds.includes(p.id) || solvedIds.includes(p.slug),
               }));
+
+              if (json.stats) {
+                setTrackStats(json.stats);
+              }
 
               // Merge Supabase custom community problems
               try {
@@ -285,7 +297,8 @@ export default function ProblemsPage() {
                   }));
 
                   const liveSlugs = new Set(liveList.map((p) => p.slug));
-                  setProblems([...dbProblems.filter((p) => !liveSlugs.has(p.slug)), ...liveList]);
+                  const combined = [...dbProblems.filter((p) => !liveSlugs.has(p.slug)), ...liveList];
+                  setProblems(combined);
                   return;
                 }
               } catch {
@@ -310,7 +323,7 @@ export default function ProblemsPage() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedCompany, timeframe, selectedDifficulty]);
+  }, [selectedCompany, timeframe]);
 
 function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): string {
   if (problem.starterCode && problem.starterCode[lang]) {
@@ -676,6 +689,11 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     }
   };
 
+  const totalTrackProblems = trackStats?.total || problems.length;
+  const easyTrackTotal = trackStats?.easy || problems.filter((p) => p.difficulty === 'Easy').length;
+  const mediumTrackTotal = trackStats?.medium || problems.filter((p) => p.difficulty === 'Medium').length;
+  const hardTrackTotal = trackStats?.hard || problems.filter((p) => p.difficulty === 'Hard').length;
+
   const solvedCount = problems.filter((p) => p.solved).length;
   const easySolved = problems.filter((p) => p.difficulty === 'Easy' && p.solved).length;
   const mediumSolved = problems.filter((p) => p.difficulty === 'Medium' && p.solved).length;
@@ -723,6 +741,13 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
     return matchesSearch && matchesPlatform && matchesCompany && matchesDiff;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProblems = filtered.slice(
+    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+    safeCurrentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -733,15 +758,19 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold border border-brand-200">
               Company-Wise Tracks
             </span>
-            {isLoadingLive && (
+            {isLoadingLive ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-brand-600 font-medium animate-pulse ml-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pulling live questions...
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pulling full company archive ({totalTrackProblems} questions)...
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500 font-medium ml-2 font-mono">
+                {totalTrackProblems} Total Questions
               </span>
             )}
           </h1>
           <p className="text-sm text-neutral-500 mt-1 flex items-center gap-2 flex-wrap">
             <span>Verified company tracks</span>
-            <span>• High-frequency interview archives</span>
+            <span>• Comprehensive interview archives ({selectedCompany} track)</span>
             <span>• Live LeetCode submit &amp; GitHub commit sync</span>
           </p>
         </div>
@@ -778,35 +807,38 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
         <Card className="p-4">
           <p className="text-xs font-medium text-neutral-500">Solved in Arena</p>
           <p className="text-2xl font-bold text-neutral-900 mt-1">
-            {solvedCount} / {problems.length}
+            {solvedCount} / {totalTrackProblems}
           </p>
           <div className="w-full bg-neutral-100 h-1.5 rounded-full mt-2 overflow-hidden">
             <div
               className="bg-brand-600 h-full rounded-full transition-all duration-500"
-              style={{ width: `${(solvedCount / Math.max(problems.length, 1)) * 100}%` }}
+              style={{ width: `${Math.min(100, (solvedCount / Math.max(totalTrackProblems, 1)) * 100)}%` }}
             />
           </div>
         </Card>
         <Card className="p-4">
           <p className="text-xs font-medium text-neutral-500">Easy Solved</p>
           <p className="text-2xl font-bold text-emerald-600 mt-1">
-            {easySolved} / {problems.filter((p) => p.difficulty === 'Easy').length}
+            {easySolved} / {easyTrackTotal}
           </p>
           <p className="text-xs text-neutral-400 mt-1">Foundations</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs font-medium text-neutral-500">Medium Solved</p>
           <p className="text-2xl font-bold text-amber-600 mt-1">
-            {mediumSolved} / {problems.filter((p) => p.difficulty === 'Medium').length}
+            {mediumSolved} / {mediumTrackTotal}
           </p>
           <p className="text-xs text-neutral-400 mt-1">Interview Standards</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-medium text-neutral-500">GitHub Commits</p>
-          <p className="text-2xl font-bold text-brand-600 mt-1 flex items-center gap-1.5">
-            <GitPullRequest className="w-5 h-5 text-brand-600" /> {commitHistory.length}
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-neutral-500">Hard Solved</p>
+            <span className="text-[10px] text-neutral-400 font-mono">Commits: {commitHistory.length}</span>
+          </div>
+          <p className="text-2xl font-bold text-rose-600 mt-1">
+            {hardSolved} / {hardTrackTotal}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">Saved to Profile</p>
+          <p className="text-xs text-neutral-400 mt-1">Advanced</p>
         </Card>
       </div>
 
@@ -902,6 +934,24 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
         </div>
       </div>
 
+      {/* Table Filter Status & Result Count */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-neutral-500 font-medium">
+        <div>
+          Showing{' '}
+          <strong className="text-neutral-900">
+            {filtered.length > 0 ? (safeCurrentPage - 1) * ITEMS_PER_PAGE + 1 : 0} -{' '}
+            {Math.min(safeCurrentPage * ITEMS_PER_PAGE, filtered.length)}
+          </strong>{' '}
+          of <strong className="text-neutral-900">{filtered.length}</strong> questions
+          {filtered.length !== totalTrackProblems && (
+            <span> (filtered from {totalTrackProblems} total in {selectedCompany} track)</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 text-neutral-500 font-mono">
+          <span>Page {safeCurrentPage} of {totalPages}</span>
+        </div>
+      </div>
+
       {/* Problems Table */}
       <Card className="overflow-hidden border border-neutral-200">
         <div className="overflow-x-auto">
@@ -919,7 +969,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {filtered.map((problem) => (
+              {paginatedProblems.map((problem) => (
                 <tr
                   key={problem.id}
                   onClick={() => setActiveProblem(problem)}
@@ -999,6 +1049,79 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        {totalPages > 1 && (
+          <div className="px-4 py-3 bg-neutral-50 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="text-neutral-500">
+              Page <strong className="text-neutral-900">{safeCurrentPage}</strong> of{' '}
+              <strong className="text-neutral-900">{totalPages}</strong> ({filtered.length} total questions)
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safeCurrentPage <= 1}
+                onClick={() => setCurrentPage(1)}
+                className="h-8 px-2 text-xs"
+                title="First Page"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safeCurrentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="h-8 px-2.5 text-xs flex items-center gap-1"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+              </Button>
+
+              {/* Surrounding page number pills */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum = safeCurrentPage - 2 + i;
+                if (pageNum < 1) pageNum = i + 1;
+                if (pageNum > totalPages) pageNum = totalPages - (Math.min(5, totalPages) - 1) + i;
+                if (pageNum < 1 || pageNum > totalPages) return null;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`h-8 w-8 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                      safeCurrentPage === pageNum
+                        ? 'bg-neutral-900 text-white shadow-xs'
+                        : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="h-8 px-2.5 text-xs flex items-center gap-1"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                className="h-8 px-2 text-xs"
+                title="Last Page"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* FULL IN-BROWSER CODE SPACE WORKBENCH */}
