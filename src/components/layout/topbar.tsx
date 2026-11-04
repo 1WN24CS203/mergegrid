@@ -10,7 +10,8 @@ import { ThemeToggle } from '@/components/theme/theme-provider';
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Home',
   '/problems': 'Problems',
-  '/contests': 'Contests',
+  '/contests': 'Contests Arena',
+  '/groups': 'Groups & Practice Circles',
   '/discussions': 'Discussions',
   '/opensource': 'Open Source',
   '/projects': 'Projects',
