@@ -67,6 +67,19 @@ interface TestCaseResult {
   runtimeMs: number;
 }
 
+interface GitHubCommitRecord {
+  id: string;
+  problemId: string;
+  problemTitle: string;
+  platform: string;
+  repo: string;
+  filePath: string;
+  commitSha: string;
+  commitUrl: string;
+  timestamp: string;
+  language: string;
+}
+
 // Curated Top Problems from https://github.com/liquidslr/leetcode-company-wise-problems
 // Clean starter strips only: NO pre-filled algorithms or answers!
 const problemsData: Problem[] = [
