@@ -31,6 +31,7 @@ import {
   Lightbulb,
   Info,
   ChevronLeft,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
@@ -114,6 +115,20 @@ export default function ProblemsPage() {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
   const [selectedCompany, setSelectedCompany] = useState<string>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Solved' | 'Unsolved'>('All');
+  const [openDropdown, setOpenDropdown] = useState<'difficulty' | 'status' | 'company' | 'platform' | null>(null);
+  const [companyFilterSearch, setCompanyFilterSearch] = useState<string>('');
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-filter-dropdown]')) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, []);
 
   // Active Code Space Workbench State
   const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
@@ -739,8 +754,27 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
       selectedCompany === 'All' || p.companies.includes(selectedCompany);
     const matchesDiff =
       selectedDifficulty === 'All' || p.difficulty === selectedDifficulty;
-    return matchesSearch && matchesPlatform && matchesCompany && matchesDiff;
+    const matchesStatus =
+      selectedStatus === 'All' || (selectedStatus === 'Solved' ? p.solved : !p.solved);
+    return matchesSearch && matchesPlatform && matchesCompany && matchesDiff && matchesStatus;
   });
+
+  const hasActiveFilters =
+    search.trim() !== '' ||
+    selectedCompany !== 'All' ||
+    selectedDifficulty !== 'All' ||
+    selectedPlatform !== 'All' ||
+    selectedStatus !== 'All';
+
+  const resetAllFilters = () => {
+    setSearch('');
+    setSelectedCompany('All');
+    setSelectedDifficulty('All');
+    setSelectedPlatform('All');
+    setSelectedStatus('All');
+    setCurrentPage(1);
+    setOpenDropdown(null);
+  };
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -754,17 +788,17 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#eff1f6] tracking-tight flex items-center gap-2.5">
             Problem Arena
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold border border-brand-200">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-[#333333] dark:text-brand-300 font-semibold border border-brand-200 dark:border-[#3e3e3e]">
               Company-Wise Tracks
             </span>
             {isLoadingLive ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-brand-600 font-medium animate-pulse ml-2">
+              <span className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 font-medium animate-pulse ml-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pulling full company archive ({totalTrackProblems} questions)...
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500 font-medium ml-2 font-mono">
+              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 font-medium ml-2 font-mono">
                 {totalTrackProblems} Total Questions
               </span>
             )}
@@ -788,133 +822,280 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <p className="text-xs font-medium text-neutral-500">Solved in Arena</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-1">
+        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Solved in Arena</p>
+          <p className="text-2xl font-bold text-neutral-900 dark:text-[#eff1f6] mt-1">
             {solvedCount} / {totalTrackProblems}
           </p>
-          <div className="w-full bg-neutral-100 h-1.5 rounded-full mt-2 overflow-hidden">
+          <div className="w-full bg-neutral-100 dark:bg-[#333333] h-1.5 rounded-full mt-2 overflow-hidden">
             <div
               className="bg-brand-600 h-full rounded-full transition-all duration-500"
               style={{ width: `${Math.min(100, (solvedCount / Math.max(totalTrackProblems, 1)) * 100)}%` }}
             />
           </div>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium text-neutral-500">Easy Solved</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">
+        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Easy Solved</p>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-[#00b8a3] mt-1">
             {easySolved} / {easyTrackTotal}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">Foundations</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Foundations</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-xs font-medium text-neutral-500">Medium Solved</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">
+        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Medium Solved</p>
+          <p className="text-2xl font-bold text-amber-600 dark:text-[#ffc01e] mt-1">
             {mediumSolved} / {mediumTrackTotal}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">Interview Standards</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Interview Standards</p>
         </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-neutral-500">Hard Solved</p>
-            <span className="text-[10px] text-neutral-400 font-mono">Commits: {commitHistory.length}</span>
-          </div>
-          <p className="text-2xl font-bold text-rose-600 mt-1">
+        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Hard Solved</p>
+          <p className="text-2xl font-bold text-rose-600 dark:text-[#ff375f] mt-1">
             {hardSolved} / {hardTrackTotal}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">Advanced</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Advanced</p>
         </Card>
       </div>
 
-      {/* Company Tag Filter Bar & Timeframe Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50/70 p-2.5 rounded-2xl border border-neutral-200/80">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
-          <span className="text-xs font-semibold text-neutral-600 shrink-0 flex items-center gap-1 pl-1">
-            <Building2 className="w-3.5 h-3.5 text-neutral-500" /> Company:
-          </span>
-          {companiesList.map((comp) => (
-            <button
-              key={comp}
-              onClick={() => setSelectedCompany(comp)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                selectedCompany === comp
-                  ? 'bg-neutral-900 text-white shadow-sm'
-                  : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-              }`}
-            >
-              {comp}
-            </button>
-          ))}
-        </div>
-
-        {/* Timeframe switch */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl shrink-0 self-start sm:self-auto border border-neutral-200 shadow-xs">
-          <button
-            onClick={() => setTimeframe('30days')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              timeframe === '30days'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900'
-            }`}
-          >
-            🔥 30-Day Trending
-          </button>
-          <button
-            onClick={() => setTimeframe('all')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              timeframe === 'all'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-500 hover:text-neutral-900'
-            }`}
-          >
-            📚 All-Time Track
-          </button>
-        </div>
-      </div>
-
-      {/* Platform & Difficulty Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1">
+      {/* LeetCode-Style Dropdown Filter Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+        {/* Search input */}
+        <div className="flex-1 min-w-[200px]">
           <Input
-            placeholder="Search LeetCode problem name, topic, or company..."
+            placeholder="Search questions, topics, or companies..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="w-4 h-4" />}
+            icon={<Search className="w-4 h-4 text-neutral-400" />}
           />
         </div>
 
-        {/* Platform Tabs */}
-        <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl shrink-0 overflow-x-auto">
-          {['All', 'LeetCode', 'Codeforces', 'HackerRank'].map((plat) => (
+        {/* Dropdown Filters */}
+        <div className="flex flex-wrap items-center gap-2" data-filter-dropdown>
+          {/* Difficulty Dropdown */}
+          <div className="relative">
             <button
-              key={plat}
-              onClick={() => setSelectedPlatform(plat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                selectedPlatform === plat
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-800'
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'difficulty' ? null : 'difficulty')}
+              className={`h-9 px-3 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors cursor-pointer select-none ${
+                selectedDifficulty !== 'All'
+                  ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-[#333333] dark:border-brand-500/40 dark:text-brand-300 font-semibold'
+                  : 'bg-white border-neutral-200 text-neutral-700 dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#303030]'
               }`}
             >
-              {plat}
+              <span className="flex items-center gap-1.5">
+                {selectedDifficulty === 'Easy' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                {selectedDifficulty === 'Medium' && <span className="w-2 h-2 rounded-full bg-amber-500" />}
+                {selectedDifficulty === 'Hard' && <span className="w-2 h-2 rounded-full bg-rose-500" />}
+                {selectedDifficulty === 'All' ? 'Difficulty' : selectedDifficulty}
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${openDropdown === 'difficulty' ? 'rotate-180' : ''}`} />
             </button>
-          ))}
-        </div>
 
-        {/* Difficulty Tabs */}
-        <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl shrink-0">
-          {['All', 'Easy', 'Medium', 'Hard'].map((diff) => (
+            {openDropdown === 'difficulty' && (
+              <div className="absolute left-0 top-full mt-1.5 w-40 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-xl py-1 z-40 text-xs">
+                {['All', 'Easy', 'Medium', 'Hard'].map((diff) => (
+                  <button
+                    key={diff}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDifficulty(diff);
+                      setOpenDropdown(null);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-[#333333] cursor-pointer ${
+                      selectedDifficulty === diff
+                        ? 'font-bold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-[#333333]'
+                        : 'text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {diff === 'Easy' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                      {diff === 'Medium' && <span className="w-2 h-2 rounded-full bg-amber-500" />}
+                      {diff === 'Hard' && <span className="w-2 h-2 rounded-full bg-rose-500" />}
+                      {diff === 'All' && <span className="w-2 h-2 rounded-full bg-neutral-400" />}
+                      {diff === 'All' ? 'All Difficulties' : diff}
+                    </span>
+                    {selectedDifficulty === diff && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Status Dropdown */}
+          <div className="relative">
             <button
-              key={diff}
-              onClick={() => setSelectedDifficulty(diff)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedDifficulty === diff
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-800'
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+              className={`h-9 px-3 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors cursor-pointer select-none ${
+                selectedStatus !== 'All'
+                  ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-[#333333] dark:border-brand-500/40 dark:text-brand-300 font-semibold'
+                  : 'bg-white border-neutral-200 text-neutral-700 dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#303030]'
               }`}
             >
-              {diff}
+              <span>{selectedStatus === 'All' ? 'Status' : selectedStatus}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${openDropdown === 'status' ? 'rotate-180' : ''}`} />
             </button>
-          ))}
+
+            {openDropdown === 'status' && (
+              <div className="absolute left-0 top-full mt-1.5 w-36 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-xl py-1 z-40 text-xs">
+                {(['All', 'Solved', 'Unsolved'] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStatus(st);
+                      setOpenDropdown(null);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-[#333333] cursor-pointer ${
+                      selectedStatus === st
+                        ? 'font-bold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-[#333333]'
+                        : 'text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <span>{st === 'All' ? 'All Status' : st}</span>
+                    {selectedStatus === st && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Company Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'company' ? null : 'company')}
+              className={`h-9 px-3 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors cursor-pointer select-none ${
+                selectedCompany !== 'All'
+                  ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-[#333333] dark:border-brand-500/40 dark:text-brand-300 font-semibold'
+                  : 'bg-white border-neutral-200 text-neutral-700 dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#303030]'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-neutral-400" />
+              <span>{selectedCompany === 'All' ? 'Company' : selectedCompany}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${openDropdown === 'company' ? 'rotate-180' : ''}`} />
+            </button>
+
+            {openDropdown === 'company' && (
+              <div className="absolute right-0 sm:left-0 top-full mt-1.5 w-60 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-xl py-1 z-40 text-xs">
+                <div className="p-2 border-b border-neutral-100 dark:border-[#383838]">
+                  <input
+                    type="text"
+                    placeholder="Search company..."
+                    value={companyFilterSearch}
+                    onChange={(e) => setCompanyFilterSearch(e.target.value)}
+                    className="w-full px-2 py-1 text-xs rounded bg-neutral-100 dark:bg-[#202020] border border-neutral-200 dark:border-[#383838] text-neutral-900 dark:text-neutral-100 outline-none"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-56 overflow-y-auto py-1">
+                  {companiesList
+                    .filter((c) => c.toLowerCase().includes(companyFilterSearch.toLowerCase()))
+                    .map((comp) => (
+                      <button
+                        key={comp}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCompany(comp);
+                          setOpenDropdown(null);
+                          setCompanyFilterSearch('');
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full px-3 py-1.5 text-left flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-[#333333] cursor-pointer ${
+                          selectedCompany === comp
+                            ? 'font-bold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-[#333333]'
+                            : 'text-neutral-700 dark:text-neutral-300'
+                        }`}
+                      >
+                        <span>{comp === 'All' ? 'All Companies' : comp}</span>
+                        {selectedCompany === comp && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Platform Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === 'platform' ? null : 'platform')}
+              className={`h-9 px-3 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors cursor-pointer select-none ${
+                selectedPlatform !== 'All'
+                  ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-[#333333] dark:border-brand-500/40 dark:text-brand-300 font-semibold'
+                  : 'bg-white border-neutral-200 text-neutral-700 dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-[#303030]'
+              }`}
+            >
+              <span>{selectedPlatform === 'All' ? 'Platform' : selectedPlatform}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${openDropdown === 'platform' ? 'rotate-180' : ''}`} />
+            </button>
+
+            {openDropdown === 'platform' && (
+              <div className="absolute right-0 sm:left-0 top-full mt-1.5 w-44 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838] rounded-xl shadow-xl py-1 z-40 text-xs">
+                {['All', 'LeetCode', 'Codeforces', 'HackerRank'].map((plat) => (
+                  <button
+                    key={plat}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlatform(plat);
+                      setOpenDropdown(null);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-neutral-100 dark:hover:bg-[#333333] cursor-pointer ${
+                      selectedPlatform === plat
+                        ? 'font-bold text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-[#333333]'
+                        : 'text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <span>{plat === 'All' ? 'All Platforms' : plat}</span>
+                    {selectedPlatform === plat && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Timeframe switch */}
+          <div className="flex items-center bg-neutral-100 dark:bg-[#202020] p-0.5 rounded-lg border border-neutral-200 dark:border-[#383838] h-9">
+            <button
+              type="button"
+              onClick={() => setTimeframe('30days')}
+              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                timeframe === '30days'
+                  ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-white shadow-xs font-semibold'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+              }`}
+            >
+              <span>🔥 30-Day</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTimeframe('all')}
+              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                timeframe === 'all'
+                  ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-white shadow-xs font-semibold'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+              }`}
+            >
+              <span>All-Time</span>
+            </button>
+          </div>
+
+          {/* Reset Filters button */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className="h-9 px-2.5 rounded-lg text-xs text-neutral-500 hover:text-rose-600 dark:text-neutral-400 dark:hover:text-rose-400 flex items-center gap-1 transition-colors cursor-pointer border border-dashed border-neutral-300 dark:border-neutral-700"
+              title="Reset all filters"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -937,10 +1118,10 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
       </div>
 
       {/* Problems Table */}
-      <Card className="overflow-hidden border border-neutral-200">
+      <Card className="overflow-hidden border border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-50 border-b border-neutral-200 text-xs font-semibold text-neutral-600">
+            <thead className="bg-neutral-50 dark:bg-[#202020] border-b border-neutral-200 dark:border-[#383838] text-xs font-semibold text-neutral-600 dark:text-neutral-400">
               <tr>
                 <th className="py-3 px-4 w-12 text-center">Status</th>
                 <th className="py-3 px-4">Title &amp; Reference</th>
@@ -952,30 +1133,30 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-neutral-100 dark:divide-[#333333]">
               {paginatedProblems.map((problem) => (
                 <tr
                   key={problem.id}
                   onClick={() => setActiveProblem(problem)}
-                  className="hover:bg-neutral-50/80 transition-colors cursor-pointer group"
+                  className="hover:bg-neutral-50/80 dark:hover:bg-[#303030] transition-colors cursor-pointer group"
                 >
                   <td className="py-3.5 px-4 text-center">
                     {problem.solved ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-500 inline-block" />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-neutral-300 mx-auto group-hover:border-neutral-400" />
+                      <div className="w-4 h-4 rounded-full border-2 border-neutral-300 dark:border-neutral-600 mx-auto group-hover:border-neutral-400 dark:group-hover:border-neutral-400" />
                     )}
                   </td>
                   <td className="py-3.5 px-4">
-                    <div className="font-semibold text-neutral-900 group-hover:text-brand-600 transition-colors">
+                    <div className="font-semibold text-neutral-900 dark:text-[#eff1f6] group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                       {problem.title}
                     </div>
-                    <div className="text-xs text-neutral-400 font-mono mt-0.5">
+                    <div className="text-xs text-neutral-400 dark:text-neutral-500 font-mono mt-0.5">
                       {problem.platformId}
                     </div>
                   </td>
                   <td className="py-3.5 px-4">
-                    <Badge variant="outline" className="font-mono text-xs">
+                    <Badge variant="outline" className="font-mono text-xs dark:bg-[#202020] dark:border-[#383838] dark:text-neutral-300">
                       {problem.platform}
                     </Badge>
                   </td>
@@ -983,16 +1164,16 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                     <span
                       className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                         problem.difficulty === 'Easy'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-[#00b8a3]/15 dark:text-[#00b8a3] dark:border-[#00b8a3]/30'
                           : problem.difficulty === 'Medium'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-[#ffc01e]/15 dark:text-[#ffc01e] dark:border-[#ffc01e]/30'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-[#ff375f]/15 dark:text-[#ff375f] dark:border-[#ff375f]/30'
                       }`}
                     >
                       {problem.difficulty}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-neutral-600 text-xs">
+                  <td className="py-3.5 px-4 text-neutral-600 dark:text-neutral-400 text-xs">
                     {problem.category}
                   </td>
                   <td className="py-3.5 px-4">
@@ -1000,19 +1181,19 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                       {problem.companies.slice(0, 3).map((comp) => (
                         <span
                           key={comp}
-                          className="text-[11px] font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200"
+                          className="text-[11px] font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200 dark:bg-[#333333] dark:border-[#3c3c3c] dark:text-neutral-300"
                         >
                           {comp}
                         </span>
                       ))}
                       {problem.companies.length > 3 && (
-                        <span className="text-[10px] text-neutral-400">
+                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
                           +{problem.companies.length - 3}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-3.5 px-4 text-neutral-500 font-mono text-xs">
+                  <td className="py-3.5 px-4 text-neutral-500 dark:text-neutral-400 font-mono text-xs">
                     {problem.acceptance}
                   </td>
                   <td className="py-3.5 px-4 text-right">
@@ -1036,10 +1217,10 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
         {/* Pagination Bar */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 bg-neutral-50 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="text-neutral-500">
-              Page <strong className="text-neutral-900">{safeCurrentPage}</strong> of{' '}
-              <strong className="text-neutral-900">{totalPages}</strong> ({filtered.length} total questions)
+          <div className="px-4 py-3 bg-neutral-50 dark:bg-[#202020] border-t border-neutral-200 dark:border-[#383838] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="text-neutral-500 dark:text-neutral-400">
+              Page <strong className="text-neutral-900 dark:text-[#eff1f6]">{safeCurrentPage}</strong> of{' '}
+              <strong className="text-neutral-900 dark:text-[#eff1f6]">{totalPages}</strong> ({filtered.length} total questions)
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -1048,7 +1229,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 variant="outline"
                 disabled={safeCurrentPage <= 1}
                 onClick={() => setCurrentPage(1)}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300"
                 title="First Page"
               >
                 <ChevronsLeft className="w-3.5 h-3.5" />
@@ -1058,7 +1239,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 variant="outline"
                 disabled={safeCurrentPage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="h-8 px-2.5 text-xs flex items-center gap-1"
+                className="h-8 px-2.5 text-xs flex items-center gap-1 dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300"
               >
                 <ChevronLeft className="w-3.5 h-3.5" /> Prev
               </Button>
@@ -1075,8 +1256,8 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                     onClick={() => setCurrentPage(pageNum)}
                     className={`h-8 w-8 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                       safeCurrentPage === pageNum
-                        ? 'bg-neutral-900 text-white shadow-xs'
-                        : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-100'
+                        ? 'bg-neutral-900 text-white dark:bg-[#3b82f6] dark:text-white shadow-xs'
+                        : 'bg-white border border-neutral-200 dark:bg-[#282828] dark:border-[#383838] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#323232]'
                     }`}
                   >
                     {pageNum}
@@ -1089,7 +1270,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 variant="outline"
                 disabled={safeCurrentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                className="h-8 px-2.5 text-xs flex items-center gap-1"
+                className="h-8 px-2.5 text-xs flex items-center gap-1 dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300"
               >
                 Next <ChevronRight className="w-3.5 h-3.5" />
               </Button>
@@ -1098,7 +1279,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 variant="outline"
                 disabled={safeCurrentPage >= totalPages}
                 onClick={() => setCurrentPage(totalPages)}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-2 text-xs dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300"
                 title="Last Page"
               >
                 <ChevronsRight className="w-3.5 h-3.5" />
@@ -1183,26 +1364,26 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             {/* Code Space Workbench Split Panels */}
             <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
               {/* Left Panel: Problem Statement & Specs */}
-              <div className={`w-full lg:w-5/12 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto p-4 sm:p-5 space-y-5 bg-white dark:bg-[#161b22] ${mobileTab === 'description' ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col'}`}>
+              <div className={`w-full lg:w-5/12 border-b lg:border-b-0 lg:border-r border-neutral-200 dark:border-[#2e2e2e] overflow-y-auto p-4 sm:p-5 space-y-5 bg-white dark:bg-[#202020] ${mobileTab === 'description' ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col'}`}>
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2">
                     Problem Description
                   </h4>
-                  <p className="text-sm text-neutral-800 leading-relaxed">
+                  <p className="text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed">
                     {activeProblem.description}
                   </p>
                 </div>
 
                 {/* Company Tags */}
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2">
                     Companies Asking This
                   </h4>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {activeProblem.companies.map((c) => (
                       <span
                         key={c}
-                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-800 border border-neutral-200"
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[#282828] text-neutral-800 dark:text-neutral-300 border border-neutral-200 dark:border-[#383838]"
                       >
                         {c}
                       </span>
@@ -1212,25 +1393,25 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
                 {/* Examples */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                     Examples
                   </h4>
                   {activeProblem.examples.map((ex, i) => (
                     <div
                       key={i}
-                      className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/80 font-mono text-xs space-y-1.5"
+                      className="p-3.5 rounded-xl bg-neutral-50 dark:bg-[#262626] border border-neutral-200/80 dark:border-[#383838] font-mono text-xs space-y-1.5"
                     >
-                      <div className="text-neutral-700">
-                        <span className="font-semibold text-neutral-900">Input: </span>
+                      <div className="text-neutral-700 dark:text-neutral-300">
+                        <span className="font-semibold text-neutral-900 dark:text-[#eff1f6]">Input: </span>
                         {ex.input}
                       </div>
-                      <div className="text-neutral-700">
-                        <span className="font-semibold text-neutral-900">Output: </span>
+                      <div className="text-neutral-700 dark:text-neutral-300">
+                        <span className="font-semibold text-neutral-900 dark:text-[#eff1f6]">Output: </span>
                         {ex.output}
                       </div>
                       {ex.explanation && (
-                        <div className="text-neutral-500 font-sans text-xs pt-1 border-t border-neutral-200/60">
-                          <span className="font-semibold text-neutral-700">Explanation: </span>
+                        <div className="text-neutral-500 dark:text-neutral-400 font-sans text-xs pt-1 border-t border-neutral-200/60 dark:border-[#383838]">
+                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">Explanation: </span>
                           {ex.explanation}
                         </div>
                       )}
@@ -1240,10 +1421,10 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
                 {/* Constraints */}
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2">
                     Constraints
                   </h4>
-                  <ul className="list-disc list-inside space-y-1 font-mono text-xs text-neutral-600">
+                  <ul className="list-disc list-inside space-y-1 font-mono text-xs text-neutral-600 dark:text-neutral-400">
                     {activeProblem.constraints.map((c, i) => (
                       <li key={i}>{c}</li>
                     ))}
@@ -1252,9 +1433,9 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
               </div>
 
               {/* Right Panel: Code Space Editor & Execution Console */}
-              <div className={`w-full lg:w-7/12 flex flex-col min-h-0 bg-[#0d1117] ${mobileTab === 'editor' ? 'flex flex-1' : 'hidden lg:flex'}`}>
+              <div className={`w-full lg:w-7/12 flex flex-col min-h-0 bg-[#1a1a1a] ${mobileTab === 'editor' ? 'flex flex-1' : 'hidden lg:flex'}`}>
                 {/* Editor Top Bar */}
-                <div className="px-4 py-2 bg-[#161b22] border-b border-neutral-800 flex items-center justify-between text-xs shrink-0">
+                <div className="px-4 py-2 bg-[#222222] border-b border-neutral-800 flex items-center justify-between text-xs shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-400 font-medium">Language:</span>
                     <select

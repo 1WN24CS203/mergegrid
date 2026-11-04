@@ -39,18 +39,18 @@ export function Topbar() {
   };
 
   return (
-    <header className="h-14 shrink-0 bg-white border-b border-neutral-200 flex items-center gap-3 px-4 sm:px-6">
+    <header className="h-14 shrink-0 bg-white dark:bg-[#202020] border-b border-neutral-200 dark:border-[#2e2e2e] flex items-center gap-3 px-4 sm:px-6">
       {/* Mobile menu toggle */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer"
+        className="lg:hidden text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-white transition-colors cursor-pointer"
         aria-label="Toggle Navigation Menu"
       >
         <Menu className="w-5 h-5" />
       </button>
 
       {/* Page title */}
-      <h1 className="text-base font-semibold text-neutral-900">{title}</h1>
+      <h1 className="text-base font-semibold text-neutral-900 dark:text-[#eff1f6] truncate">{title}</h1>
 
       {/* Spacer */}
       <div className="flex-1" />
@@ -58,7 +58,7 @@ export function Topbar() {
       {/* Search */}
       <form
         onSubmit={handleSearch}
-        className="hidden sm:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 h-8 w-64 hover:bg-neutral-150 transition-colors group"
+        className="hidden sm:flex items-center gap-2 bg-neutral-100 dark:bg-[#282828] border border-transparent dark:border-[#383838] rounded-lg px-3 h-8 w-64 hover:bg-neutral-150 dark:hover:bg-[#303030] transition-colors group"
       >
         <Search className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-500" />
         <input
@@ -66,9 +66,9 @@ export function Topbar() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search problems, topics..."
-          className="bg-transparent text-sm text-neutral-700 placeholder-neutral-400 outline-none w-full"
+          className="bg-transparent text-sm text-neutral-700 dark:text-neutral-200 placeholder-neutral-400 outline-none w-full"
         />
-        <kbd className="hidden md:inline-flex text-[10px] text-neutral-400 bg-white border border-neutral-200 rounded px-1.5 py-0.5 font-mono">
+        <kbd className="hidden md:inline-flex text-[10px] text-neutral-400 dark:text-neutral-500 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-[#383838] rounded px-1.5 py-0.5 font-mono">
           ↵
         </kbd>
       </form>

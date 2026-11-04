@@ -89,7 +89,7 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
         <aside
           className={cn(
             'fixed lg:static inset-y-0 left-0 z-50',
-            'flex flex-col bg-white border-r border-neutral-200',
+            'flex flex-col bg-white dark:bg-[#202020] border-r border-neutral-200 dark:border-[#2e2e2e]',
             'transition-all duration-300 ease-in-out',
             collapsed ? 'w-[68px]' : 'w-[260px]',
             mobileOpen
@@ -243,12 +243,12 @@ function NavItem({
         'flex items-center gap-2.5 rounded-lg transition-all duration-150',
         collapsed ? 'justify-center w-10 h-10 mx-auto' : 'px-3 h-9',
         isActive
-          ? 'bg-brand-50 text-brand-700 font-medium'
-          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+          ? 'bg-brand-50 text-brand-700 dark:bg-[#333333] dark:text-[#eff1f6] font-medium'
+          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-[#2c2c2c] hover:text-neutral-900 dark:hover:text-[#eff1f6]'
       )}
       title={collapsed ? label : undefined}
     >
-      <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-brand-600')} />
+      <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive ? 'text-brand-600 dark:text-brand-400' : 'text-neutral-500 dark:text-neutral-400')} />
       {!collapsed && <span className="text-sm truncate">{label}</span>}
     </Link>
   );

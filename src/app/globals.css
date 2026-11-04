@@ -64,92 +64,169 @@
 }
 
 /* ============================================
-   Dark Mode Overrides
+   Dark Mode Overrides (LeetCode Inspired)
+   Refined matte dark palette (#1a1a1a / #282828 / #333333)
    ============================================ */
 
 .dark {
-  --color-neutral-50: #0d1117;
-  --color-neutral-100: #161b22;
-  --color-neutral-200: #21262d;
-  --color-neutral-300: #30363d;
-  --color-neutral-400: #8b949e;
-  --color-neutral-500: #8b949e;
-  --color-neutral-600: #c9d1d9;
-  --color-neutral-700: #e6edf3;
-  --color-neutral-800: #f0f6fc;
-  --color-neutral-900: #ffffff;
+  --color-neutral-50: #1a1a1a;
+  --color-neutral-100: #222222;
+  --color-neutral-200: #2e2e2e;
+  --color-neutral-300: #383838;
+  --color-neutral-400: #737373;
+  --color-neutral-500: #909090;
+  --color-neutral-600: #b5b5b5;
+  --color-neutral-700: #d4d4d4;
+  --color-neutral-800: #e5e5e5;
+  --color-neutral-900: #eff1f6;
+
+  /* Overrides for brand tints so active pills don't glow stark white */
+  --color-brand-50: #242c3d;
+  --color-brand-100: #1e3a8a;
 
   color-scheme: dark;
 }
 
 .dark body {
-  color: #f0f6fc;
-  background-color: #0d1117;
+  color: #eff1f6;
+  background-color: #1a1a1a !important;
 }
 
+/* LeetCode surface cards */
 .dark .bg-white {
-  background-color: #161b22 !important;
+  background-color: #282828 !important;
 }
 
-.dark .bg-neutral-50 {
-  background-color: #0d1117 !important;
+.dark .bg-neutral-50,
+.dark [class*="bg-neutral-50/"] {
+  background-color: #202020 !important;
 }
 
-.dark .bg-neutral-100 {
-  background-color: #21262d !important;
+.dark .bg-neutral-100,
+.dark [class*="bg-neutral-100/"] {
+  background-color: #2b2b2b !important;
 }
 
 .dark .bg-neutral-150 {
-  background-color: #30363d !important;
+  background-color: #333333 !important;
 }
 
+.dark .bg-brand-50,
+.dark [class*="bg-brand-50/"] {
+  background-color: #242c3d !important;
+}
+
+/* Hover surfaces */
 .dark .hover\:bg-neutral-50:hover {
-  background-color: #21262d !important;
+  background-color: #2f2f2f !important;
 }
 
 .dark .hover\:bg-neutral-100:hover {
-  background-color: #2a313c !important;
+  background-color: #343434 !important;
 }
 
+.dark .hover\:bg-white:hover {
+  background-color: #303030 !important;
+}
+
+/* Subtle uniform borders */
 .dark .border-neutral-200,
-.dark .border-neutral-100 {
-  border-color: #30363d !important;
+.dark .border-neutral-100,
+.dark [class*="border-neutral-200/"],
+.dark [class*="border-neutral-100/"] {
+  border-color: #383838 !important;
 }
 
+/* Text Hierarchy */
 .dark .text-neutral-900 {
-  color: #f0f6fc !important;
+  color: #eff1f6 !important;
 }
 
 .dark .text-neutral-800 {
-  color: #e6edf3 !important;
+  color: #e2e2e2 !important;
 }
 
 .dark .text-neutral-700 {
-  color: #c9d1d9 !important;
+  color: #c5c5c5 !important;
 }
 
 .dark .text-neutral-600 {
-  color: #8b949e !important;
+  color: #9e9e9e !important;
 }
 
 .dark .text-neutral-500 {
-  color: #8b949e !important;
+  color: #909090 !important;
 }
 
+.dark .text-neutral-400 {
+  color: #737373 !important;
+}
+
+/* LeetCode difficulty pill styling */
+.dark .bg-emerald-50 {
+  background-color: rgba(0, 184, 163, 0.12) !important;
+}
+.dark .text-emerald-700,
+.dark .text-emerald-600 {
+  color: #00b8a3 !important;
+}
+.dark .border-emerald-200,
+.dark .border-emerald-300 {
+  border-color: rgba(0, 184, 163, 0.3) !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: rgba(255, 192, 30, 0.12) !important;
+}
+.dark .text-amber-700,
+.dark .text-amber-600 {
+  color: #ffc01e !important;
+}
+.dark .border-amber-200,
+.dark .border-amber-300 {
+  border-color: rgba(255, 192, 30, 0.3) !important;
+}
+
+.dark .bg-rose-50 {
+  background-color: rgba(255, 55, 95, 0.12) !important;
+}
+.dark .text-rose-700,
+.dark .text-rose-600 {
+  color: #ff375f !important;
+}
+.dark .border-rose-200,
+.dark .border-rose-300 {
+  border-color: rgba(255, 55, 95, 0.3) !important;
+}
+
+/* Form Inputs */
 .dark input:not([type="checkbox"]):not([type="radio"]),
 .dark select,
 .dark textarea {
-  background-color: #0d1117 !important;
-  color: #f0f6fc !important;
-  border-color: #30363d !important;
+  background-color: #222222 !important;
+  color: #eff1f6 !important;
+  border-color: #383838 !important;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3b82f6 !important;
+  background-color: #262626 !important;
+}
+
+/* Smooth muted scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1a1a1a;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: #383838;
+  border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: #4a4a4a;
 }
 
 /* ============================================
