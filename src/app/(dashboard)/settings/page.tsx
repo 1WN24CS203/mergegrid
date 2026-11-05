@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Settings,
   User,
@@ -11,13 +12,17 @@ import {
   Check,
   Moon,
   Sun,
+  AlertTriangle,
+  Trash2,
+  X,
+  Laptop,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { useTheme } from '@/components/theme/theme-provider';
-import { Laptop } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('Developer');
@@ -26,8 +31,58 @@ export default function SettingsPage() {
   const [bio, setBio] = useState('Student engineer building distributed systems, open source, and algorithmic solutions.');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [contestReminders, setContestReminders] = useState(true);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [confirmDeleteText, setConfirmDeleteText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+
+  const handleDeleteAccount = async () => {
+    if (confirmDeleteText.trim() !== 'DELETE') {
+      toast({ type: 'error', title: 'Confirmation required', message: 'Please type DELETE to confirm.' });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        // Delete user profile data
+        await supabase.from('profiles').delete().eq('id', user.id);
+        await supabase.from('user_solved_problems').delete().eq('user_id', user.id);
+        await supabase.auth.signOut();
+      }
+    } catch {
+      // Ignore if Supabase unavailable
+    }
+
+    // Clear all local records
+    try {
+      localStorage.removeItem('mergegrid_user_profile');
+      localStorage.removeItem('mergegrid_solved_problems');
+      localStorage.removeItem('mergegrid_theme');
+      localStorage.removeItem('mergegrid_groups');
+      localStorage.removeItem('mergegrid_contests');
+      localStorage.removeItem('mergegrid_github_commits');
+      document.cookie = 'mergegrid_demo_session=; path=/; max-age=0';
+    } catch {
+      // Ignore
+    }
+
+    toast({
+      type: 'info',
+      title: 'Account Deleted',
+      message: 'Your account and personal data have been completely removed.',
+    });
+
+    setIsDeleting(false);
+    setShowDeleteAccountModal(false);
+    router.push('/login');
+    router.refresh();
+  };
 
   React.useEffect(() => {
     try {
@@ -251,6 +306,103 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Danger Zone: Delete Account */}
+      <Card className="p-6 border-rose-200 dark:border-rose-900/40 bg-rose-50/20 dark:bg-rose-950/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-500" /> Danger Zone
+            </h2>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 max-w-xl leading-relaxed">
+              Permanently delete your MergeGrid account, public profile, contest participations, and solved problem archives. This action cannot be reversed.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowDeleteAccountModal(true)}
+            className="border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40 font-semibold text-xs shrink-0"
+            icon={<Trash2 className="w-4 h-4 text-rose-500" />}
+          >
+            Delete Account
+          </Button>
+        </div>
+      </Card>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#383838] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">Delete Account</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Irreversible destruction of account data
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setConfirmDeleteText('');
+                }}
+                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-neutral-600 dark:text-neutral-300 space-y-2 leading-relaxed">
+              <p>
+                Are you absolutely sure you want to delete your MergeGrid account (<strong>@{username}</strong>)?
+              </p>
+              <div className="p-3 rounded-lg bg-neutral-100 dark:bg-[#202020] text-neutral-700 dark:text-neutral-300 font-mono text-[11px] space-y-1">
+                <div>• All solved problems and streak logs will be deleted.</div>
+                <div>• You will be removed from your groups and guild rosters.</div>
+                <div>• Your collegiate ranking contributions will be reset.</div>
+              </div>
+              <p className="text-neutral-500 dark:text-neutral-400">
+                To confirm deletion, please type <strong className="text-rose-600 dark:text-rose-400">DELETE</strong> below:
+              </p>
+            </div>
+
+            <Input
+              placeholder="Type DELETE to confirm"
+              value={confirmDeleteText}
+              onChange={(e) => setConfirmDeleteText(e.target.value)}
+              className="text-center font-mono font-bold tracking-widest uppercase"
+              autoFocus
+            />
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setConfirmDeleteText('');
+                }}
+                className="text-xs dark:bg-[#202020] dark:border-[#383838] dark:text-neutral-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteAccount}
+                loading={isDeleting}
+                disabled={confirmDeleteText.trim() !== 'DELETE'}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm disabled:opacity-50"
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Permanently Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

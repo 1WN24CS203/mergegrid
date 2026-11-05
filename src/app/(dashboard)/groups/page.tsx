@@ -17,6 +17,12 @@ import {
   Code2,
   Calendar,
   Flame,
+  Trash2,
+  LogOut,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Search,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +40,7 @@ export interface GroupMember {
   role: 'leader' | 'member';
   status: 'online' | 'practicing' | 'offline';
   solvedCount: number;
+  membershipStatus?: 'active' | 'pending';
 }
 
 export interface Group {
@@ -49,8 +56,17 @@ export interface Group {
   createdAt: string;
 }
 
+interface RegisteredUser {
+  id: string;
+  name: string;
+  username: string;
+  college?: string;
+  avatarUrl?: string | null;
+}
+
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('current-user-id');
   const [currentUserName, setCurrentUserName] = useState<string>('Developer');
   const [currentUserHandle, setCurrentUserHandle] = useState<string>('developer');
@@ -59,7 +75,8 @@ export default function GroupsPage() {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedGroupForInvite, setSelectedGroupForInvite] = useState<Group | null>(null);
-  const [inviteUsername, setInviteUsername] = useState('');
+  const [inviteSearch, setInviteSearch] = useState('');
+  const [selectedUserToInvite, setSelectedUserToInvite] = useState<RegisteredUser | null>(null);
   const [activePracticeGroup, setActivePracticeGroup] = useState<Group | null>(null);
 
   // Contest Calling from Group
@@ -78,10 +95,12 @@ export default function GroupsPage() {
   const [newGroupDescription, setNewGroupDescription] = useState('');
   const [newGroupType, setNewGroupType] = useState<'friends' | 'official'>('friends');
   const [newGroupTopics, setNewGroupTopics] = useState<string[]>(['Algorithms', 'Data Structures']);
+  const [selectedInitialUsers, setSelectedInitialUsers] = useState<RegisteredUser[]>([]);
+  const [initialUserSearch, setInitialUserSearch] = useState('');
 
   const { toast } = useToast();
 
-  // Load User & Groups (strictly real data, zero dummy data)
+  // Load User, Groups & Registered accounts
   useEffect(() => {
     try {
       const savedProfile = localStorage.getItem('mergegrid_user_profile');
@@ -100,16 +119,55 @@ export default function GroupsPage() {
       // Ignore
     }
 
-    async function fetchSupabaseGroups() {
+    async function fetchSupabaseData() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
+        let uid = 'current-user-id';
+        let uname = 'developer';
+        let dname = 'Developer';
+
         if (user) {
+          uid = user.id;
           setCurrentUserId(user.id);
-          if (user.user_metadata?.full_name) setCurrentUserName(user.user_metadata.full_name);
-          if (user.user_metadata?.user_name) setCurrentUserHandle(user.user_metadata.user_name);
+          dname =
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.user_metadata?.display_name ||
+            user.email?.split('@')[0] ||
+            'Developer';
+          uname =
+            user.user_metadata?.user_name ||
+            user.user_metadata?.preferred_username ||
+            user.email?.split('@')[0] ||
+            'developer';
+          setCurrentUserName(dname);
+          setCurrentUserHandle(uname);
         }
 
+        // Fetch all registered users from profiles table so only existing members can be invited
+        const { data: dbProfiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, username, college, avatar_url')
+          .order('display_name', { ascending: true });
+
+        if (dbProfiles && dbProfiles.length > 0) {
+          const mappedUsers: RegisteredUser[] = dbProfiles.map((p) => ({
+            id: p.id,
+            name: p.display_name || p.username || 'Developer',
+            username: p.username || 'dev',
+            college: p.college || 'Engineering Institute',
+            avatarUrl: p.avatar_url,
+          }));
+          setRegisteredUsers(mappedUsers);
+        } else {
+          // Fallback initial registered accounts
+          setRegisteredUsers([
+            { id: uid, name: dname, username: uname, college: 'Engineering Institute' },
+          ]);
+        }
+
+        // Fetch groups
         const { data: dbGroups, error } = await supabase
           .from('groups')
           .select('*')
@@ -123,16 +181,17 @@ export default function GroupsPage() {
             description: g.description || '',
             type: g.group_type || 'friends',
             leaderId: g.leader_id || '',
-            leaderName: g.leader_id === user?.id ? currentUserName : 'Group Leader',
+            leaderName: g.leader_id === uid ? dname : 'Group Leader',
             topics: g.practice_topics || ['Algorithms'],
             members: [
               {
-                id: user?.id || 'current-user-id',
-                name: currentUserName,
-                username: currentUserHandle,
-                role: g.leader_id === user?.id ? 'leader' : 'member',
+                id: uid,
+                name: dname,
+                username: uname,
+                role: g.leader_id === uid ? 'leader' : 'member',
                 status: 'online',
                 solvedCount: 0,
+                membershipStatus: 'active',
               },
             ],
             createdAt: g.created_at,
@@ -144,7 +203,7 @@ export default function GroupsPage() {
         // Fallback to local storage
       }
     }
-    fetchSupabaseGroups();
+    fetchSupabaseData();
   }, []);
 
   const saveGroups = (updated: Group[]) => {
@@ -156,10 +215,22 @@ export default function GroupsPage() {
     }
   };
 
-  // Create Group
+  // Create Group with real existing members (Pending approval)
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
+
+    const invitedMembersList: GroupMember[] = selectedInitialUsers
+      .filter((u) => u.id !== currentUserId && u.username !== currentUserHandle)
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        role: 'member',
+        status: 'online',
+        solvedCount: 0,
+        membershipStatus: 'pending', // Requires approval
+      }));
 
     const newGroup: Group = {
       id: `grp-${Date.now()}`,
@@ -178,7 +249,9 @@ export default function GroupsPage() {
           role: 'leader',
           status: 'online',
           solvedCount: 0,
+          membershipStatus: 'active',
         },
+        ...invitedMembersList,
       ],
       createdAt: new Date().toISOString(),
     };
@@ -204,26 +277,40 @@ export default function GroupsPage() {
     setShowCreateGroupModal(false);
     setNewGroupName('');
     setNewGroupDescription('');
+    setSelectedInitialUsers([]);
 
     toast({
       type: 'success',
-      title: 'Group Created!',
-      message: `"${newGroup.name}" is now ready for collaborative practice and contests.`,
+      title: 'Group Formed!',
+      message: `"${newGroup.name}" created. Invitations sent to ${invitedMembersList.length} member(s) for approval.`,
     });
   };
 
-  // Invite Member
+  // Invite Existing Member (Approval Workflow)
   const handleInviteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedGroupForInvite || !inviteUsername.trim()) return;
+    if (!selectedGroupForInvite || !selectedUserToInvite) {
+      toast({ type: 'error', title: 'Please select an existing registered user' });
+      return;
+    }
+
+    // Check if already in group
+    const alreadyIn = selectedGroupForInvite.members.some(
+      (m) => m.id === selectedUserToInvite.id || m.username.toLowerCase() === selectedUserToInvite.username.toLowerCase()
+    );
+    if (alreadyIn) {
+      toast({ type: 'info', title: 'Already in group', message: `@${selectedUserToInvite.username} is already in this group.` });
+      return;
+    }
 
     const newMember: GroupMember = {
-      id: `user-${Date.now()}`,
-      name: inviteUsername.trim(),
-      username: inviteUsername.trim().toLowerCase().replace(/\s+/g, '_'),
+      id: selectedUserToInvite.id,
+      name: selectedUserToInvite.name,
+      username: selectedUserToInvite.username,
       role: 'member',
       status: 'online',
       solvedCount: 0,
+      membershipStatus: 'pending', // Requires member's approval
     };
 
     const updated = groups.map((g) => {
@@ -238,12 +325,108 @@ export default function GroupsPage() {
 
     saveGroups(updated);
     setShowInviteModal(false);
-    setInviteUsername('');
+    setSelectedUserToInvite(null);
+    setInviteSearch('');
 
     toast({
       type: 'success',
-      title: 'Member Added!',
-      message: `${newMember.name} has been added to ${selectedGroupForInvite.name}.`,
+      title: 'Invitation Sent! ✉️',
+      message: `Invited @${selectedUserToInvite.username} to join "${selectedGroupForInvite.name}". Awaiting their approval.`,
+    });
+  };
+
+  // Approve / Accept Invitation
+  const handleAcceptInvite = (groupId: string) => {
+    const updated = groups.map((g) => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          members: g.members.map((m) =>
+            m.id === currentUserId || m.username.toLowerCase() === currentUserHandle.toLowerCase()
+              ? { ...m, membershipStatus: 'active' as const }
+              : m
+          ),
+        };
+      }
+      return g;
+    });
+
+    saveGroups(updated);
+    toast({
+      type: 'success',
+      title: 'Invitation Accepted! 🎉',
+      message: 'You have joined the group. You can now access practice rooms and clashes.',
+    });
+  };
+
+  // Decline Invitation
+  const handleDeclineInvite = (groupId: string) => {
+    const updated = groups.map((g) => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          members: g.members.filter(
+            (m) => m.id !== currentUserId && m.username.toLowerCase() !== currentUserHandle.toLowerCase()
+          ),
+        };
+      }
+      return g;
+    });
+
+    saveGroups(updated);
+    toast({
+      type: 'info',
+      title: 'Invitation Declined',
+      message: 'You declined the group invitation.',
+    });
+  };
+
+  // Delete Group (Leader Only)
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete "${groupName}"? This cannot be undone.`)) {
+      return;
+    }
+
+    const updated = groups.filter((g) => g.id !== groupId);
+    saveGroups(updated);
+
+    try {
+      const supabase = createClient();
+      await supabase.from('groups').delete().eq('id', groupId);
+    } catch {
+      // Ignore
+    }
+
+    toast({
+      type: 'info',
+      title: 'Group Deleted',
+      message: `"${groupName}" has been removed.`,
+    });
+  };
+
+  // Exit / Leave Group
+  const handleExitGroup = (groupId: string, groupName: string) => {
+    if (!window.confirm(`Are you sure you want to leave "${groupName}"?`)) {
+      return;
+    }
+
+    const updated = groups.map((g) => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          members: g.members.filter(
+            (m) => m.id !== currentUserId && m.username.toLowerCase() !== currentUserHandle.toLowerCase()
+          ),
+        };
+      }
+      return g;
+    });
+
+    saveGroups(updated);
+    toast({
+      type: 'info',
+      title: 'Left Group',
+      message: `You have left "${groupName}".`,
     });
   };
 
@@ -262,7 +445,9 @@ export default function GroupsPage() {
     setContestTitle(`${group.name} Clash #${Math.floor(Math.random() * 90 + 10)}`);
     setContestTargetType('all');
     setSelectedTargetFriends(
-      group.members.filter((m) => m.id !== currentUserId).map((m) => m.name)
+      group.members
+        .filter((m) => m.id !== currentUserId && m.membershipStatus === 'active')
+        .map((m) => m.name)
     );
     setShowCallContestModal(true);
   };
@@ -290,7 +475,7 @@ export default function GroupsPage() {
           : selectedGroupForContest.members.map((m) => m.name),
       durationMinutes: contestDuration,
       startTime: new Date().toISOString(),
-      status: 'live',
+      status: 'live' as const,
       problemIds: pickedProblems.map((p) => p.id),
       problemTitles: pickedProblems.map((p) => p.title),
       participantsCount:
@@ -314,6 +499,15 @@ export default function GroupsPage() {
       message: `"${newContest.title}" is now active in Contests Arena.`,
     });
   };
+
+  // Find incoming pending invitations for the logged-in user
+  const pendingInvitations = groups.filter((g) =>
+    g.members.some(
+      (m) =>
+        (m.id === currentUserId || m.username.toLowerCase() === currentUserHandle.toLowerCase()) &&
+        m.membershipStatus === 'pending'
+    )
+  );
 
   return (
     <div className="space-y-6">
@@ -342,7 +536,66 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {/* Zero State if No Groups Formed Yet */}
+      {/* Pending Invitations Approval Banner */}
+      {pendingInvitations.length > 0 && (
+        <Card className="p-4 sm:p-5 bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div>
+                <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm flex items-center gap-2">
+                  Incoming Group Invitations ({pendingInvitations.length})
+                </h3>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-0.5">
+                  You have been invited to join the following practice circles. Please approve or decline:
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {pendingInvitations.map((grp) => (
+                  <div
+                    key={grp.id}
+                    className="p-3 rounded-xl bg-white dark:bg-[#202020] border border-amber-200 dark:border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div>
+                      <span className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">
+                        {grp.name}
+                      </span>
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400 ml-2">
+                        • Leader: {grp.leaderName} ({grp.type === 'friends' ? 'Friends Group' : 'Official Guild'})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleAcceptInvite(grp.id)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs"
+                        icon={<Check className="w-3.5 h-3.5" />}
+                      >
+                        Accept &amp; Join
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeclineInvite(grp.id)}
+                        className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-rose-600"
+                        icon={<X className="w-3.5 h-3.5" />}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Groups List */}
       {groups.length === 0 ? (
         <Card className="p-10 sm:p-14 text-center border-dashed border-2 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
           <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-[#242c3d] text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto mb-4 border border-brand-200/80 dark:border-[#383838]">
@@ -374,6 +627,13 @@ export default function GroupsPage() {
           {groups.map((group) => {
             const isFriendsGroup = group.type === 'friends';
             const isLeader = group.leaderId === currentUserId;
+            const isMember = group.members.some(
+              (m) =>
+                (m.id === currentUserId || m.username.toLowerCase() === currentUserHandle.toLowerCase()) &&
+                m.membershipStatus === 'active'
+            );
+            const activeMembers = group.members.filter((m) => m.membershipStatus !== 'pending');
+            const pendingMembers = group.members.filter((m) => m.membershipStatus === 'pending');
 
             return (
               <Card
@@ -412,6 +672,29 @@ export default function GroupsPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Delete or Leave Group Actions */}
+                    <div className="flex items-center gap-1.5">
+                      {isLeader ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteGroup(group.id, group.name)}
+                          className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Delete Group (Leader Action)"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : isMember ? (
+                        <button
+                          type="button"
+                          onClick={() => handleExitGroup(group.id, group.name)}
+                          className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Exit Group"
+                        >
+                          <LogOut className="w-4 h-4" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
 
                   {/* Description */}
@@ -440,7 +723,12 @@ export default function GroupsPage() {
                   <div>
                     <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-2">
                       <span className="font-semibold">
-                        Members ({group.members.length})
+                        Members ({activeMembers.length})
+                        {pendingMembers.length > 0 && (
+                          <span className="text-amber-600 dark:text-amber-400 font-normal ml-1">
+                            +{pendingMembers.length} invited
+                          </span>
+                        )}
                       </span>
                       <button
                         type="button"
@@ -450,15 +738,17 @@ export default function GroupsPage() {
                         }}
                         className="text-brand-600 dark:text-brand-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                       >
-                        <UserPlus className="w-3.5 h-3.5" /> Invite
+                        <UserPlus className="w-3.5 h-3.5" /> Invite Member
                       </button>
                     </div>
 
                     <div className="flex items-center gap-2 overflow-x-auto py-1">
-                      {group.members.map((m) => (
+                      {/* Active members */}
+                      {activeMembers.map((m) => (
                         <div
                           key={m.id}
                           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-50 border border-neutral-200 dark:bg-[#202020] dark:border-[#383838] text-xs shrink-0"
+                          title={`${m.name} (@${m.username}) - Active Member`}
                         >
                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           <span className="font-medium text-neutral-800 dark:text-neutral-200">{m.name}</span>
@@ -467,6 +757,19 @@ export default function GroupsPage() {
                               Leader
                             </span>
                           )}
+                        </div>
+                      ))}
+
+                      {/* Pending invitations */}
+                      {pendingMembers.map((m) => (
+                        <div
+                          key={m.id}
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50/70 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50 text-[11px] shrink-0 text-amber-800 dark:text-amber-300"
+                          title={`Invited: Awaiting @${m.username}'s approval`}
+                        >
+                          <Clock className="w-3 h-3 text-amber-500 animate-pulse" />
+                          <span>{m.name}</span>
+                          <span className="text-[9px] uppercase tracking-wider font-semibold opacity-75">(Pending)</span>
                         </div>
                       ))}
                     </div>
@@ -518,38 +821,8 @@ export default function GroupsPage() {
         </div>
       )}
 
-      {/* Informational Guidance Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
-          <div className="flex items-center gap-2.5 mb-1.5 text-neutral-900 dark:text-[#eff1f6] font-semibold text-sm">
-            <Users className="w-4 h-4 text-emerald-600 dark:text-[#00b8a3]" /> Equal Friends Circles
-          </div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            In Friends Groups, any member can call a speedrun clash and challenge specific group peers.
-          </p>
-        </Card>
-
-        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
-          <div className="flex items-center gap-2.5 mb-1.5 text-neutral-900 dark:text-[#eff1f6] font-semibold text-sm">
-            <Shield className="w-4 h-4 text-indigo-600 dark:text-[#818cf8]" /> Campus Guild Clashes
-          </div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Represent your engineering college or technical club. Only guild leaders schedule official matches.
-          </p>
-        </Card>
-
-        <Card className="p-4 bg-white dark:bg-[#282828] border border-neutral-200 dark:border-[#383838]">
-          <div className="flex items-center gap-2.5 mb-1.5 text-neutral-900 dark:text-[#eff1f6] font-semibold text-sm">
-            <BookOpen className="w-4 h-4 text-brand-600 dark:text-brand-400" /> Collaborative Practice
-          </div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Practice core DSA patterns together and view collaborative solve rates on the Guild Leaderboard.
-          </p>
-        </Card>
-      </div>
-
       {/* ========================================================= */}
-      {/* MODAL 1: CREATE GROUP */}
+      {/* MODAL 1: CREATE GROUP MODAL WITH EXISTING MEMBERS SELECTION */}
       {/* ========================================================= */}
       {showCreateGroupModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
@@ -560,9 +833,9 @@ export default function GroupsPage() {
                   <UserPlus className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">Create Group</h3>
+                  <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">Create Practice Group</h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Form a circle with your friends or establish an official campus guild.
+                    Invite registered peers. They will receive an invitation to approve.
                   </p>
                 </div>
               </div>
@@ -576,90 +849,148 @@ export default function GroupsPage() {
 
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1.5">
+                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
                   Group Type &amp; Contest Rules
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setNewGroupType('friends')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       newGroupType === 'friends'
-                        ? 'border-emerald-600 bg-emerald-50/50 dark:bg-[#00b8a3]/10 ring-2 ring-emerald-500/20'
-                        : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020]'
+                        ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 ring-2 ring-emerald-500/20'
+                        : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020] hover:border-neutral-300'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-xs text-neutral-900 dark:text-[#eff1f6] flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00b8a3]" /> Friends Group
+                        <Users className="w-3.5 h-3.5 text-emerald-600" /> Friends Group
                       </span>
-                      {newGroupType === 'friends' && (
-                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-[#00b8a3] font-bold" />
-                      )}
+                      {newGroupType === 'friends' && <Check className="w-3.5 h-3.5 text-emerald-600 font-bold" />}
                     </div>
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
-                      <strong>Any member can call contests</strong> and challenge selected peers anytime.
+                      <strong>Anyone can call contests</strong> and challenge peers anytime.
                     </p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setNewGroupType('official')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       newGroupType === 'official'
-                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-[#6366f1]/10 ring-2 ring-indigo-500/20'
-                        : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020]'
+                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 ring-2 ring-indigo-500/20'
+                        : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020] hover:border-neutral-300'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-xs text-neutral-900 dark:text-[#eff1f6] flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-indigo-600 dark:text-[#818cf8]" /> Official Guild
+                        <Shield className="w-3.5 h-3.5 text-indigo-600" /> Official Guild
                       </span>
-                      {newGroupType === 'official' && (
-                        <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-[#818cf8] font-bold" />
-                      )}
+                      {newGroupType === 'official' && <Check className="w-3.5 h-3.5 text-indigo-600 font-bold" />}
                     </div>
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
-                      <strong>Only group leader</strong> can schedule and create official contests.
+                      <strong>Leader schedules contests</strong> for campus competitions.
                     </p>
                   </button>
                 </div>
               </div>
 
-              <Input
-                label="Group Name"
-                placeholder="e.g. Algorithmic Speedrunners, BMSCE DSA Cell"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                required
-              />
-
               <div>
                 <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Description / Purpose
+                  Group Name
                 </label>
-                <textarea
-                  rows={2}
-                  value={newGroupDescription}
-                  onChange={(e) => setNewGroupDescription(e.target.value)}
-                  placeholder="What is the goal of this practice group?"
-                  className="w-full text-sm border border-neutral-200 dark:border-[#383838] rounded-lg p-2.5 bg-white dark:bg-[#202020] text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                <Input
+                  placeholder="e.g. Dynamic Programming Masters"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-[#383838]">
+              <div>
+                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  placeholder="Describe your practice targets, patterns you are grinding, or contest schedule..."
+                  value={newGroupDescription}
+                  onChange={(e) => setNewGroupDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border text-xs bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-[#383838] min-h-[64px]"
+                />
+              </div>
+
+              {/* Select Existing Members to Invite */}
+              <div>
+                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                  Invite Existing Registered Members (Approval Required)
+                </label>
+                <div className="relative mb-2">
+                  <Input
+                    placeholder="Search registered members by name or @username..."
+                    value={initialUserSearch}
+                    onChange={(e) => setInitialUserSearch(e.target.value)}
+                    icon={<Search className="w-3.5 h-3.5 text-neutral-400" />}
+                  />
+                </div>
+
+                <div className="max-h-36 overflow-y-auto border border-neutral-200 dark:border-[#383838] rounded-xl p-1 space-y-1">
+                  {registeredUsers
+                    .filter(
+                      (u) =>
+                        u.id !== currentUserId &&
+                        (u.name.toLowerCase().includes(initialUserSearch.toLowerCase()) ||
+                          u.username.toLowerCase().includes(initialUserSearch.toLowerCase()))
+                    )
+                    .map((user) => {
+                      const isSelected = selectedInitialUsers.some((u) => u.id === user.id);
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedInitialUsers((prev) => prev.filter((u) => u.id !== user.id));
+                            } else {
+                              setSelectedInitialUsers((prev) => [...prev, user]);
+                            }
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300 font-semibold'
+                              : 'hover:bg-neutral-100 dark:hover:bg-[#333333] text-neutral-800 dark:text-neutral-200'
+                          }`}
+                        >
+                          <div>
+                            <span>{user.name}</span>
+                            <span className="text-[11px] text-neutral-400 dark:text-neutral-500 ml-1.5 font-mono">
+                              @{user.username}
+                            </span>
+                          </div>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-brand-600" />}
+                        </div>
+                      );
+                    })}
+                </div>
+                {selectedInitialUsers.length > 0 && (
+                  <p className="text-[11px] text-neutral-500 mt-1">
+                    {selectedInitialUsers.length} member(s) selected. They must approve your invitation to activate membership.
+                  </p>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-neutral-100 dark:border-[#383838] flex items-center justify-end gap-2.5">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowCreateGroupModal(false)}
+                  className="text-xs dark:bg-[#202020] dark:border-[#383838] dark:text-neutral-300"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold"
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-sm"
                 >
-                  Create Group
+                  Create &amp; Send Invites
                 </Button>
               </div>
             </form>
@@ -668,43 +999,122 @@ export default function GroupsPage() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 2: INVITE MEMBER */}
+      {/* MODAL 2: INVITE MEMBER MODAL (ONLY EXISTING REGISTERED USERS) */}
       {/* ========================================================= */}
       {showInviteModal && selectedGroupForInvite && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
           <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] space-y-4 animate-scale-in">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#383838] pb-3">
-              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                Invite Member to {selectedGroupForInvite.name}
-              </h3>
-              <button onClick={() => setShowInviteModal(false)} className="text-neutral-400 p-1">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">Invite Member</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    To &quot;{selectedGroupForInvite.name}&quot;
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setSelectedUserToInvite(null);
+                  setInviteSearch('');
+                }}
+                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-1"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleInviteSubmit} className="space-y-4">
-              <Input
-                label="Peer Name or Username"
-                placeholder="e.g. Sneha Patil or sneha_code"
-                value={inviteUsername}
-                onChange={(e) => setInviteUsername(e.target.value)}
-                required
-              />
+              <div>
+                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                  Search Registered Member
+                </label>
+                <Input
+                  placeholder="Search by name or @handle..."
+                  value={inviteSearch}
+                  onChange={(e) => setInviteSearch(e.target.value)}
+                  icon={<Search className="w-3.5 h-3.5 text-neutral-400" />}
+                  autoFocus
+                />
+              </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Autocomplete of Real Existing Members */}
+              <div className="max-h-48 overflow-y-auto border border-neutral-200 dark:border-[#383838] rounded-xl p-1 space-y-1">
+                {registeredUsers
+                  .filter(
+                    (u) =>
+                      u.id !== currentUserId &&
+                      (u.name.toLowerCase().includes(inviteSearch.toLowerCase()) ||
+                        u.username.toLowerCase().includes(inviteSearch.toLowerCase()))
+                  )
+                  .map((user) => {
+                    const isSelected = selectedUserToInvite?.id === user.id;
+                    const alreadyInGroup = selectedGroupForInvite.members.some(
+                      (m) => m.id === user.id || m.username.toLowerCase() === user.username.toLowerCase()
+                    );
+
+                    return (
+                      <div
+                        key={user.id}
+                        onClick={() => {
+                          if (!alreadyInGroup) setSelectedUserToInvite(user);
+                        }}
+                        className={`flex items-center justify-between p-2.5 rounded-lg text-xs transition-colors ${
+                          alreadyInGroup
+                            ? 'opacity-40 cursor-not-allowed bg-neutral-50 dark:bg-[#202020]'
+                            : isSelected
+                            ? 'bg-brand-50 dark:bg-brand-950/30 text-brand-700 dark:text-brand-300 font-semibold cursor-pointer'
+                            : 'hover:bg-neutral-100 dark:hover:bg-[#333333] text-neutral-800 dark:text-neutral-200 cursor-pointer'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-semibold">{user.name}</div>
+                          <div className="text-[11px] text-neutral-400 font-mono">@{user.username}</div>
+                        </div>
+                        {alreadyInGroup ? (
+                          <span className="text-[10px] text-neutral-500 font-medium">Already in group</span>
+                        ) : isSelected ? (
+                          <Check className="w-4 h-4 text-brand-600" />
+                        ) : null}
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {selectedUserToInvite && (
+                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                  <span>Selected: <strong>{selectedUserToInvite.name}</strong> (@{selectedUserToInvite.username})</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+              )}
+
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                ⚠️ Note: The user will receive an approval notification. They must accept before joining the circle.
+              </p>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowInviteModal(false)}
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setSelectedUserToInvite(null);
+                  }}
+                  className="text-xs dark:bg-[#202020] dark:border-[#383838] dark:text-neutral-300"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold"
+                  disabled={!selectedUserToInvite}
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs disabled:opacity-50"
+                  icon={<UserPlus className="w-3.5 h-3.5" />}
                 >
-                  Add to Group
+                  Send Invitation
                 </Button>
               </div>
             </form>
@@ -712,25 +1122,19 @@ export default function GroupsPage() {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 3: CALL / LAUNCH CONTEST */}
-      {/* ========================================================= */}
+      {/* MODAL 3: CALL CONTEST MODAL */}
       {showCallContestModal && selectedGroupForContest && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] max-h-[90vh] overflow-y-auto space-y-5 animate-scale-in">
+          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] space-y-4 animate-scale-in">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#383838] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-[#00b8a3]/10 text-emerald-600 dark:text-[#00b8a3] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                   <Swords className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">
-                    Call Contest in {selectedGroupForContest.name}
-                  </h3>
+                  <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">Call Contest / Clash</h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    {selectedGroupForContest.type === 'friends'
-                      ? 'In a Friends Group, any member can call a contest and pick specific friends.'
-                      : 'Hosting official contest as Guild Leader.'}
+                    Host a challenge for &quot;{selectedGroupForContest.name}&quot;
                   </p>
                 </div>
               </div>
@@ -743,130 +1147,65 @@ export default function GroupsPage() {
             </div>
 
             <form onSubmit={handleCallContestSubmit} className="space-y-4">
-              <Input
-                label="Contest Title"
-                value={contestTitle}
-                onChange={(e) => setContestTitle(e.target.value)}
-                required
-              />
-
-              <div>
-                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1.5">
-                  Contest Duration
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[30, 45, 60, 90].map((mins) => (
-                    <button
-                      key={mins}
-                      type="button"
-                      onClick={() => setContestDuration(mins)}
-                      className={`py-2 text-xs font-semibold rounded-lg border text-center transition-all cursor-pointer ${
-                        contestDuration === mins
-                          ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-[#333333] dark:border-brand-500/50 dark:text-brand-300 font-bold'
-                          : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020] text-neutral-700 dark:text-neutral-300'
-                      }`}
-                    >
-                      {mins} mins
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1.5">
-                  Target Participants
-                </label>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setContestTargetType('all')}
-                    className={`py-2 px-3 text-xs font-semibold rounded-lg border text-left cursor-pointer ${
-                      contestTargetType === 'all'
-                        ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-[#333333] dark:border-brand-500/50 dark:text-brand-300 font-bold'
-                        : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020] text-neutral-700 dark:text-neutral-300'
-                    }`}
-                  >
-                    All Members ({selectedGroupForContest.members.length})
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setContestTargetType('selected_friends')}
-                    className={`py-2 px-3 text-xs font-semibold rounded-lg border text-left cursor-pointer ${
-                      contestTargetType === 'selected_friends'
-                        ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-[#333333] dark:border-brand-500/50 dark:text-brand-300 font-bold'
-                        : 'border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#202020] text-neutral-700 dark:text-neutral-300'
-                    }`}
-                  >
-                    Select Specific Friends
-                  </button>
-                </div>
-
-                {contestTargetType === 'selected_friends' && (
-                  <div className="border border-neutral-200 dark:border-[#383838] rounded-lg p-2.5 bg-neutral-50 dark:bg-[#202020] space-y-1.5 max-h-36 overflow-y-auto">
-                    {selectedGroupForContest.members
-                      .filter((m) => m.id !== currentUserId)
-                      .map((member) => {
-                        const isChecked = selectedTargetFriends.includes(member.name);
-                        return (
-                          <label
-                            key={member.id}
-                            className="flex items-center justify-between p-1.5 rounded-md hover:bg-white dark:hover:bg-[#282828] transition-colors cursor-pointer text-xs"
-                          >
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {
-                                  if (isChecked) {
-                                    setSelectedTargetFriends(
-                                      selectedTargetFriends.filter((n) => n !== member.name)
-                                    );
-                                  } else {
-                                    setSelectedTargetFriends([
-                                      ...selectedTargetFriends,
-                                      member.name,
-                                    ]);
-                                  }
-                                }}
-                                className="rounded text-brand-600 focus:ring-brand-500"
-                              />
-                              <span className="font-semibold text-neutral-800 dark:text-neutral-200">{member.name}</span>
-                            </div>
-                          </label>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-
               <div>
                 <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Problems in Contest
+                  Contest Title
                 </label>
-                <select
-                  value={selectedProblemCount}
-                  onChange={(e) => setSelectedProblemCount(Number(e.target.value))}
-                  className="w-full text-sm border border-neutral-200 dark:border-[#383838] rounded-lg p-2.5 bg-white dark:bg-[#202020] text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                >
-                  <option value={2}>2 Problems (Sprint / Speedrun)</option>
-                  <option value={3}>3 Problems (Standard Format)</option>
-                  <option value={4}>4 Problems (Collegiate Hackathon)</option>
-                </select>
+                <Input
+                  value={contestTitle}
+                  onChange={(e) => setContestTitle(e.target.value)}
+                  placeholder="e.g. 1v1 Binary Tree Sprint"
+                  required
+                />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-[#383838]">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Duration
+                  </label>
+                  <select
+                    value={contestDuration}
+                    onChange={(e) => setContestDuration(Number(e.target.value))}
+                    className="w-full h-10 px-3 rounded-lg border text-xs bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-[#383838]"
+                  >
+                    <option value={30}>30 Minutes</option>
+                    <option value={45}>45 Minutes</option>
+                    <option value={60}>60 Minutes</option>
+                    <option value={90}>90 Minutes</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+                    Problems Count
+                  </label>
+                  <select
+                    value={selectedProblemCount}
+                    onChange={(e) => setSelectedProblemCount(Number(e.target.value))}
+                    className="w-full h-10 px-3 rounded-lg border text-xs bg-white dark:bg-[#202020] text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-[#383838]"
+                  >
+                    <option value={1}>1 Problem Clash</option>
+                    <option value={2}>2 Problems</option>
+                    <option value={3}>3 Problems (Standard)</option>
+                    <option value={4}>4 Problems</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowCallContestModal(false)}
+                  className="text-xs dark:bg-[#202020] dark:border-[#383838] dark:text-neutral-300"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                  icon={<Swords className="w-4 h-4" />}
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-sm"
+                  icon={<Swords className="w-3.5 h-3.5" />}
                 >
                   Launch Contest
                 </Button>
@@ -876,36 +1215,26 @@ export default function GroupsPage() {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 4: LEADER RESTRICTION NOTICE */}
-      {/* ========================================================= */}
+      {/* MODAL 4: LEADER RESTRICTED MODAL */}
       {showLeaderRestrictedModal && restrictedGroupInfo && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] space-y-4 animate-scale-in text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200 dark:border-amber-800/40">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200 dark:border-amber-900/40">
               <Lock className="w-6 h-6" />
             </div>
-
-            <div className="space-y-1.5">
-              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-lg">Leader-Only Permission</h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                In <strong>Official Campus Guilds</strong> ({restrictedGroupInfo.name}), only the designated Group Leader (
-                <strong className="text-neutral-800 dark:text-neutral-200">{restrictedGroupInfo.leaderName}</strong>) can schedule and host contests.
+            <div>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-lg">
+                Leader Authorization Required
+              </h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 leading-relaxed">
+                In official campus guilds like &quot;<strong>{restrictedGroupInfo.name}</strong>&quot;, only the designated group leader can schedule and host official contests.
               </p>
             </div>
-
-            <div className="p-3 bg-neutral-50 dark:bg-[#202020] rounded-xl border border-neutral-200 dark:border-[#383838] text-xs text-neutral-600 dark:text-neutral-400 text-left space-y-1">
-              <div className="font-semibold text-neutral-800 dark:text-neutral-200">💡 How to compete with friends:</div>
-              <ul className="list-disc list-inside space-y-0.5 text-neutral-500 dark:text-neutral-400">
-                <li>Create a <strong>Friends Group</strong> where any member can call contests anytime.</li>
-                <li>Or ask <strong>{restrictedGroupInfo.leaderName}</strong> to schedule an official clash.</li>
-              </ul>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div className="pt-2 flex items-center justify-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => setShowLeaderRestrictedModal(false)}
+                className="text-xs dark:bg-[#202020] dark:border-[#383838] dark:text-neutral-300"
               >
                 Understood
               </Button>
@@ -913,9 +1242,9 @@ export default function GroupsPage() {
                 onClick={() => {
                   setShowLeaderRestrictedModal(false);
                   setShowCreateGroupModal(true);
+                  setNewGroupType('friends');
                 }}
-                className="bg-brand-600 hover:bg-brand-700 text-white font-semibold"
-                icon={<Plus className="w-4 h-4" />}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs"
               >
                 Create Friends Group
               </Button>
@@ -924,23 +1253,21 @@ export default function GroupsPage() {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 5: PRACTICE ROOM */}
-      {/* ========================================================= */}
+      {/* PRACTICE ROOM MODAL */}
       {activePracticeGroup && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] max-h-[90vh] overflow-y-auto space-y-5 animate-scale-in">
+          <div className="bg-white dark:bg-[#282828] rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-neutral-200 dark:border-[#383838] space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#383838] pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-[#242c3d] text-brand-600 dark:text-brand-400 flex items-center justify-center">
-                  <BookOpen className="w-4 h-4" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-[#242c3d] text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">
-                    {activePracticeGroup.name} — Practice Room
+                    {activePracticeGroup.name} • Practice Room
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Collaborative problem solving and shared practice tracks.
+                    Collaborative study problems curated for your group focus.
                   </p>
                 </div>
               </div>
@@ -952,46 +1279,44 @@ export default function GroupsPage() {
               </button>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Recommended for this group:</div>
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                Recommended Pattern Problems
+              </h4>
               <div className="space-y-2">
-                {curatedProblemsCatalog.slice(0, 3).map((problem) => (
+                {curatedProblemsCatalog.slice(0, 4).map((p) => (
                   <div
-                    key={problem.id}
-                    className="p-3 rounded-xl border border-neutral-200 dark:border-[#383838] hover:border-brand-300 bg-neutral-50 dark:bg-[#202020] flex items-center justify-between gap-3"
+                    key={p.id}
+                    className="p-3.5 rounded-xl border border-neutral-200 dark:border-[#383838] bg-neutral-50/50 dark:bg-[#202020] flex items-center justify-between gap-3"
                   >
                     <div>
-                      <div className="text-xs font-bold text-neutral-900 dark:text-[#eff1f6]">{problem.title}</div>
-                      <div className="text-[11px] text-neutral-500 dark:text-neutral-400">{problem.category} • {problem.difficulty}</div>
+                      <div className="font-bold text-xs text-neutral-900 dark:text-[#eff1f6] flex items-center gap-2">
+                        <span>{p.title}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.2 rounded-full ${
+                            p.difficulty === 'Easy'
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                              : p.difficulty === 'Medium'
+                              ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400'
+                          }`}
+                        >
+                          {p.difficulty}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        {p.category} • {p.acceptance} acceptance
+                      </p>
                     </div>
-                    <Link href={`/problems?q=${encodeURIComponent(problem.title)}`}>
-                      <Button size="sm" variant="outline" className="text-xs dark:bg-[#282828] dark:border-[#383838] dark:text-neutral-300">
-                        Solve
+
+                    <Link href={`/problems?search=${encodeURIComponent(p.title)}`}>
+                      <Button size="sm" className="bg-brand-600 hover:bg-brand-700 text-white text-xs">
+                        Solve <Code2 className="w-3.5 h-3.5 ml-1" />
                       </Button>
                     </Link>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-[#383838]">
-              <Button
-                variant="outline"
-                onClick={() => setActivePracticeGroup(null)}
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  const grp = activePracticeGroup;
-                  setActivePracticeGroup(null);
-                  handleInitiateContest(grp);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs"
-                icon={<Swords className="w-3.5 h-3.5" />}
-              >
-                Call Contest from here
-              </Button>
             </div>
           </div>
         </div>
