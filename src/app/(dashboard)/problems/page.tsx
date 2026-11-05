@@ -857,6 +857,59 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
         </Card>
       </div>
 
+      {/* Quick Company Track Capsule Bar (Horizontal Scrollable + 30-Day Trending) */}
+      <div className="flex items-center justify-between gap-3 p-2 bg-white dark:bg-[#282828] rounded-xl border border-neutral-200 dark:border-[#383838] shadow-xs overflow-hidden">
+        {/* Horizontal scrollable company pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 flex-1">
+          <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1 shrink-0 mr-1">
+            <Building2 className="w-3.5 h-3.5" /> Company:
+          </span>
+          {companiesList.map((comp) => (
+            <button
+              key={comp}
+              type="button"
+              onClick={() => {
+                setSelectedCompany(comp);
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                selectedCompany === comp
+                  ? 'bg-neutral-900 text-white dark:bg-[#eff1f6] dark:text-neutral-900 font-bold shadow-xs'
+                  : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-[#333333] dark:hover:bg-[#3a3a3a] dark:text-neutral-300'
+              }`}
+            >
+              {comp}
+            </button>
+          ))}
+        </div>
+
+        {/* 30-Day Trending / All-Time Track */}
+        <div className="flex items-center gap-1 shrink-0 pl-2 border-l border-neutral-200 dark:border-[#383838]">
+          <button
+            type="button"
+            onClick={() => setTimeframe('30days')}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              timeframe === '30days'
+                ? 'bg-neutral-900 text-white dark:bg-[#eff1f6] dark:text-neutral-900 font-bold shadow-xs'
+                : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-[#333333] dark:text-neutral-300'
+            }`}
+          >
+            <span>🔥 30-Day Trending</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTimeframe('all')}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              timeframe === 'all'
+                ? 'bg-neutral-900 text-white dark:bg-[#eff1f6] dark:text-neutral-900 font-bold shadow-xs'
+                : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-[#333333] dark:text-neutral-300'
+            }`}
+          >
+            <span>💻 All-Time Track</span>
+          </button>
+        </div>
+      </div>
+
       {/* LeetCode-Style Dropdown Filter Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
         {/* Search input */}
@@ -1056,32 +1109,6 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Timeframe switch */}
-          <div className="flex items-center bg-neutral-100 dark:bg-[#202020] p-0.5 rounded-lg border border-neutral-200 dark:border-[#383838] h-9">
-            <button
-              type="button"
-              onClick={() => setTimeframe('30days')}
-              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
-                timeframe === '30days'
-                  ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
-              }`}
-            >
-              <span>🔥 30-Day</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeframe('all')}
-              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
-                timeframe === 'all'
-                  ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                  : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
-              }`}
-            >
-              <span>All-Time</span>
-            </button>
           </div>
 
           {/* Reset Filters button */}

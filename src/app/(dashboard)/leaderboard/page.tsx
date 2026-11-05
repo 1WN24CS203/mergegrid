@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Trophy,
   Flame,
@@ -12,10 +13,13 @@ import {
   Star,
   TrendingUp,
   Sparkles,
+  Shield,
+  ArrowRight,
+  Code2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 
 interface CollegeRank {
@@ -38,14 +42,27 @@ interface UserRank {
   isCurrentUser?: boolean;
 }
 
+interface GroupRank {
+  rank: number;
+  id: string;
+  name: string;
+  slug: string;
+  type: 'friends' | 'official';
+  leaderName: string;
+  membersCount: number;
+  problemsSolved: number;
+  reputation: number;
+}
+
 export default function LeaderboardPage() {
-  const [tab, setTab] = useState<'colleges' | 'individuals'>('individuals');
+  const [tab, setTab] = useState<'individuals' | 'groups' | 'colleges'>('individuals');
   const [currentUsername, setCurrentUsername] = useState('developer');
   const [currentDisplayName, setCurrentDisplayName] = useState('Developer');
   const [currentCollege, setCurrentCollege] = useState('Engineering Guild');
   const [solvedCount, setSolvedCount] = useState(0);
 
   const [usersData, setUsersData] = useState<UserRank[]>([]);
+  const [groupsData, setGroupsData] = useState<GroupRank[]>([]);
   const [collegesData, setCollegesData] = useState<CollegeRank[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,11 +81,37 @@ export default function LeaderboardPage() {
         if (p.username) setCurrentUsername(p.username);
         if (p.college) setCurrentCollege(p.college);
       }
+
+      // Load local groups
+      const savedGroups = localStorage.getItem('mergegrid_groups');
+      if (savedGroups) {
+        const parsedG = JSON.parse(savedGroups);
+        if (Array.isArray(parsedG) && parsedG.length > 0) {
+          const mappedGroups: GroupRank[] = parsedG.map((g: any, idx: number) => {
+            const memberCount = Array.isArray(g.members) ? g.members.length : 1;
+            const solved = Array.isArray(g.members)
+              ? g.members.reduce((acc: number, m: any) => acc + (m.solvedCount || 0), 0)
+              : 0;
+            return {
+              rank: idx + 1,
+              id: g.id || `grp-${idx}`,
+              name: g.name || 'Practice Group',
+              slug: g.slug || '',
+              type: g.type || 'friends',
+              leaderName: g.leaderName || 'Leader',
+              membersCount: memberCount,
+              problemsSolved: solved,
+              reputation: solved * 50 + memberCount * 25,
+            };
+          });
+          setGroupsData(mappedGroups.sort((a, b) => b.reputation - a.reputation).map((g, i) => ({ ...g, rank: i + 1 })));
+        }
+      }
     } catch {
       // Ignore
     }
 
-    // 2. Fetch live registered accounts from Supabase profiles table
+    // 2. Fetch live data from Supabase
     async function fetchLiveLeaderboard() {
       setLoading(true);
       try {
@@ -91,6 +134,7 @@ export default function LeaderboardPage() {
           );
         }
 
+        // Fetch users
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select('*')
@@ -98,7 +142,6 @@ export default function LeaderboardPage() {
           .order('reputation_points', { ascending: false });
 
         if (!error && profiles && profiles.length > 0) {
-          // Map real registered users
           const mappedUsers: UserRank[] = profiles.map((p, index) => ({
             rank: index + 1,
             name: p.display_name || p.username || 'Developer',
@@ -145,7 +188,7 @@ export default function LeaderboardPage() {
 
           setCollegesData(dynamicColleges);
         } else {
-          // Fallback initial seeded community accounts if table empty
+          // Default initial registered user entry for self
           const fallbackUsers: UserRank[] = [
             {
               rank: 1,
@@ -157,24 +200,6 @@ export default function LeaderboardPage() {
               problems: solvedCount,
               isCurrentUser: true,
             },
-            {
-              rank: 2,
-              name: 'Arjun Sharma',
-              username: 'arjun_dsa',
-              college: 'IIT Bombay Tech Council',
-              reputation: 340,
-              streak: 4,
-              problems: 5,
-            },
-            {
-              rank: 3,
-              name: 'Neha Gupta',
-              username: 'neha_code',
-              college: 'PES University Ring of Code',
-              reputation: 280,
-              streak: 3,
-              problems: 4,
-            },
           ];
           setUsersData(fallbackUsers);
 
@@ -185,25 +210,30 @@ export default function LeaderboardPage() {
               points: 100 + solvedCount * 50,
               activeStudents: 1,
               problemsSolved: solvedCount,
-              weeklyGrowth: '+12%',
-            },
-            {
-              rank: 2,
-              college: 'IIT Bombay Tech Council',
-              points: 340,
-              activeStudents: 1,
-              problemsSolved: 5,
-              weeklyGrowth: '+18%',
-            },
-            {
-              rank: 3,
-              college: 'PES University Ring of Code',
-              points: 280,
-              activeStudents: 1,
-              problemsSolved: 4,
               weeklyGrowth: '+10%',
             },
           ]);
+        }
+
+        // Fetch live groups from Supabase
+        const { data: dbGroups } = await supabase
+          .from('groups')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (dbGroups && dbGroups.length > 0) {
+          const mappedGroups: GroupRank[] = dbGroups.map((g: any, idx: number) => ({
+            rank: idx + 1,
+            id: g.id,
+            name: g.name,
+            slug: g.slug || '',
+            type: g.group_type || 'friends',
+            leaderName: g.leader_id === user?.id ? currentDisplayName : 'Group Leader',
+            membersCount: 1,
+            problemsSolved: 0,
+            reputation: 100,
+          }));
+          setGroupsData(mappedGroups);
         }
       } catch {
         // Fallback
@@ -217,29 +247,54 @@ export default function LeaderboardPage() {
 
   // Safe podium items
   const user1 = usersData[0] || {
-    name: 'Developer',
-    username: 'developer',
-    college: 'Arena',
+    name: currentDisplayName || 'Developer',
+    username: currentUsername || 'developer',
+    college: currentCollege || 'Arena',
     reputation: 120,
     problems: 0,
   };
   const user2 = usersData[1] || {
-    name: 'Open Slot',
-    username: 'community',
-    college: 'Arena',
+    name: 'Open Podium Slot',
+    username: 'ready_to_climb',
+    college: 'Your College Guild',
     reputation: 100,
     problems: 0,
   };
   const user3 = usersData[2] || {
-    name: 'Open Slot',
-    username: 'community',
-    college: 'Arena',
-    reputation: 100,
+    name: 'Open Podium Slot',
+    username: 'ready_to_climb',
+    college: 'Your College Guild',
+    reputation: 90,
     problems: 0,
   };
 
+  const group1 = groupsData[0] || {
+    name: 'First Circle',
+    type: 'friends' as const,
+    leaderName: currentDisplayName,
+    membersCount: 1,
+    reputation: 100,
+    problemsSolved: 0,
+  };
+  const group2 = groupsData[1] || {
+    name: 'Open Circle Slot',
+    type: 'official' as const,
+    leaderName: 'Campus Leader',
+    membersCount: 0,
+    reputation: 80,
+    problemsSolved: 0,
+  };
+  const group3 = groupsData[2] || {
+    name: 'Open Circle Slot',
+    type: 'friends' as const,
+    leaderName: 'Friendly Host',
+    membersCount: 0,
+    reputation: 60,
+    problemsSolved: 0,
+  };
+
   const col1 = collegesData[0] || {
-    college: 'Engineering Guild',
+    college: currentCollege || 'Engineering Guild',
     points: 120,
     weeklyGrowth: '+5%',
   };
@@ -259,31 +314,42 @@ export default function LeaderboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-[#eff1f6] tracking-tight">
             Developer Leaderboard
           </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Live rankings of registered developers across all collegiate guilds. Solve arena problems to climb!
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            Live rankings of coders, practice circles, and collegiate guilds. Solve arena problems to climb!
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-neutral-100 p-1 rounded-xl">
+        {/* Triple Tab Selector */}
+        <div className="flex items-center gap-1 bg-neutral-100 dark:bg-[#202020] p-1 rounded-xl border border-neutral-200 dark:border-[#383838]">
           <button
             onClick={() => setTab('individuals')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               tab === 'individuals'
-                ? 'bg-white text-neutral-900 shadow-sm'
-                : 'text-neutral-600 hover:text-neutral-900'
+                ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-[#eff1f6] shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-[#eff1f6]'
             }`}
           >
             Registered Developers ({usersData.length})
           </button>
           <button
+            onClick={() => setTab('groups')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              tab === 'groups'
+                ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-[#eff1f6] shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-[#eff1f6]'
+            }`}
+          >
+            Groups &amp; Circles ({groupsData.length})
+          </button>
+          <button
             onClick={() => setTab('colleges')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               tab === 'colleges'
-                ? 'bg-white text-neutral-900 shadow-sm'
-                : 'text-neutral-600 hover:text-neutral-900'
+                ? 'bg-white dark:bg-[#333333] text-neutral-900 dark:text-[#eff1f6] shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-[#eff1f6]'
             }`}
           >
             College Guilds
@@ -296,143 +362,233 @@ export default function LeaderboardPage() {
         {tab === 'colleges' ? (
           <>
             {/* Rank 2 */}
-            <Card className="p-5 text-center order-2 md:order-1 border-neutral-200">
-              <div className="w-10 h-10 rounded-full bg-neutral-200 text-neutral-700 font-bold mx-auto flex items-center justify-center text-sm mb-2">
+            <Card className="p-5 text-center order-2 md:order-1 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
+              <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-[#333333] text-neutral-700 dark:text-neutral-300 font-bold mx-auto flex items-center justify-center text-sm mb-2">
                 #2
               </div>
-              <h3 className="font-bold text-neutral-900 text-sm">{col2.college}</h3>
-              <p className="text-xl font-extrabold text-neutral-800 mt-1">{col2.points} pts</p>
-              <p className="text-xs text-neutral-400 mt-1">Active Guild</p>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">{col2.college}</h3>
+              <p className="text-xl font-extrabold text-neutral-800 dark:text-neutral-200 mt-1">{col2.points} pts</p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Active Guild</p>
             </Card>
 
             {/* Rank 1 */}
-            <Card className="p-6 text-center order-1 md:order-2 border-amber-300 bg-gradient-to-b from-amber-50/50 to-white shadow-md relative">
+            <Card className="p-6 text-center order-1 md:order-2 border-amber-300 dark:border-amber-500/40 bg-gradient-to-b from-amber-50/60 to-white dark:from-[#332a1e] dark:to-[#282828] shadow-md relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-white font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
                 <Trophy className="w-3 h-3" /> Campus Leader
               </div>
               <div className="w-12 h-12 rounded-full bg-amber-400 text-neutral-950 font-extrabold mx-auto flex items-center justify-center text-base mb-2 shadow-inner">
                 #1
               </div>
-              <h3 className="font-bold text-neutral-900 text-base">{col1.college}</h3>
-              <p className="text-2xl font-black text-amber-600 mt-1">{col1.points} pts</p>
-              <p className="text-xs text-emerald-600 font-semibold mt-1 flex items-center justify-center gap-1">
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">{col1.college}</h3>
+              <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{col1.points} pts</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center justify-center gap-1">
                 <TrendingUp className="w-3.5 h-3.5" /> {col1.weeklyGrowth}
               </p>
             </Card>
 
             {/* Rank 3 */}
-            <Card className="p-5 text-center order-3 border-neutral-200">
-              <div className="w-10 h-10 rounded-full bg-amber-700/20 text-amber-800 font-bold mx-auto flex items-center justify-center text-sm mb-2">
+            <Card className="p-5 text-center order-3 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
+              <div className="w-10 h-10 rounded-full bg-amber-700/20 text-amber-800 dark:text-amber-300 font-bold mx-auto flex items-center justify-center text-sm mb-2">
                 #3
               </div>
-              <h3 className="font-bold text-neutral-900 text-sm">{col3.college}</h3>
-              <p className="text-xl font-extrabold text-neutral-800 mt-1">{col3.points} pts</p>
-              <p className="text-xs text-neutral-400 mt-1">Active Guild</p>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">{col3.college}</h3>
+              <p className="text-xl font-extrabold text-neutral-800 dark:text-neutral-200 mt-1">{col3.points} pts</p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Active Guild</p>
+            </Card>
+          </>
+        ) : tab === 'groups' ? (
+          <>
+            {/* Rank 2 Group */}
+            <Card className="p-5 text-center order-2 md:order-1 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
+              <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-[#333333] text-neutral-700 dark:text-neutral-300 font-bold mx-auto flex items-center justify-center text-sm mb-2">
+                #2
+              </div>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">{group2.name}</h3>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Leader: {group2.leaderName}</p>
+              <p className="text-xl font-extrabold text-neutral-800 dark:text-neutral-200 mt-2">{group2.reputation} Pts</p>
+            </Card>
+
+            {/* Rank 1 Group */}
+            <Card className="p-6 text-center order-1 md:order-2 border-amber-300 dark:border-amber-500/40 bg-gradient-to-b from-amber-50/60 to-white dark:from-[#332a1e] dark:to-[#282828] shadow-md relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-white font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                <Trophy className="w-3 h-3" /> Top Practice Circle
+              </div>
+              <div className="w-12 h-12 rounded-full bg-amber-400 text-neutral-950 font-extrabold mx-auto flex items-center justify-center text-base mb-2 shadow-inner">
+                #1
+              </div>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">{group1.name}</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                {group1.type === 'friends' ? 'Friends Group' : 'Official Guild'} • Leader: {group1.leaderName}
+              </p>
+              <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-2">{group1.reputation} Pts</p>
+            </Card>
+
+            {/* Rank 3 Group */}
+            <Card className="p-5 text-center order-3 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
+              <div className="w-10 h-10 rounded-full bg-amber-700/20 text-amber-800 dark:text-amber-300 font-bold mx-auto flex items-center justify-center text-sm mb-2">
+                #3
+              </div>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">{group3.name}</h3>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Leader: {group3.leaderName}</p>
+              <p className="text-xl font-extrabold text-neutral-800 dark:text-neutral-200 mt-2">{group3.reputation} Pts</p>
             </Card>
           </>
         ) : (
           <>
-            {/* Rank 2 */}
-            <Card className="p-5 text-center order-2 md:order-1 border-neutral-200">
-              <div className="w-10 h-10 rounded-full bg-neutral-200 text-neutral-700 font-bold mx-auto flex items-center justify-center text-sm mb-2">
+            {/* Rank 2 Individual */}
+            <Card className="p-5 text-center order-2 md:order-1 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
+              <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-[#333333] text-neutral-700 dark:text-neutral-300 font-bold mx-auto flex items-center justify-center text-sm mb-2">
                 #2
               </div>
-              <h3 className="font-bold text-neutral-900 text-sm">{user2.name}</h3>
-              <p className="text-xs text-neutral-400 font-mono mt-0.5">@{user2.username} • {user2.college}</p>
-              <p className="text-xl font-extrabold text-neutral-800 mt-2">{user2.reputation} Rep</p>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">{user2.name}</h3>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono mt-0.5">@{user2.username} • {user2.college}</p>
+              <p className="text-xl font-extrabold text-neutral-800 dark:text-neutral-200 mt-2">{user2.reputation} Rep</p>
             </Card>
 
-            {/* Rank 1 */}
-            <Card className="p-6 text-center order-1 md:order-2 border-amber-300 bg-gradient-to-b from-amber-50/50 to-white shadow-md relative">
+            {/* Rank 1 Individual */}
+            <Card className="p-6 text-center order-1 md:order-2 border-amber-300 dark:border-amber-500/40 bg-gradient-to-b from-amber-50/60 to-white dark:from-[#332a1e] dark:to-[#282828] shadow-md relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-white font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
                 <Trophy className="w-3 h-3" /> Season Leader
               </div>
               <div className="w-12 h-12 rounded-full bg-amber-400 text-neutral-950 font-extrabold mx-auto flex items-center justify-center text-base mb-2 shadow-inner">
                 #1
               </div>
-              <h3 className="font-bold text-neutral-900 text-base">{user1.name}</h3>
-              <p className="text-xs text-neutral-500 font-mono mt-0.5">@{user1.username} • {user1.college}</p>
-              <p className="text-2xl font-black text-amber-600 mt-2">{user1.reputation} Rep</p>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-base">{user1.name}</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 font-mono mt-0.5">@{user1.username} • {user1.college}</p>
+              <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-2">{user1.reputation} Rep</p>
             </Card>
 
-            {/* Rank 3 */}
-            <Card className="p-5 text-center order-3 border-neutral-200">
-              <div className="w-10 h-10 rounded-full bg-amber-700/20 text-amber-800 font-bold mx-auto flex items-center justify-center text-sm mb-2">
+            {/* Rank 3 Individual */}
+            <Card className="p-5 text-center order-3 border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
+              <div className="w-10 h-10 rounded-full bg-amber-700/20 text-amber-800 dark:text-amber-300 font-bold mx-auto flex items-center justify-center text-sm mb-2">
                 #3
               </div>
-              <h3 className="font-bold text-neutral-900 text-sm">{user3.name}</h3>
-              <p className="text-xs text-neutral-400 font-mono mt-0.5">@{user3.username} • {user3.college}</p>
-              <p className="text-xl font-extrabold text-neutral-800 mt-2">{user3.reputation} Rep</p>
+              <h3 className="font-bold text-neutral-900 dark:text-[#eff1f6] text-sm">{user3.name}</h3>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 font-mono mt-0.5">@{user3.username} • {user3.college}</p>
+              <p className="text-xl font-extrabold text-neutral-800 dark:text-neutral-200 mt-2">{user3.reputation} Rep</p>
             </Card>
           </>
         )}
       </div>
 
       {/* Detailed Table */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border border-neutral-200 dark:border-[#383838] bg-white dark:bg-[#282828]">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs text-neutral-500 uppercase tracking-wider font-semibold">
+          <thead className="bg-neutral-50 dark:bg-[#202020] border-b border-neutral-200 dark:border-[#383838] text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-semibold">
             <tr>
               <th className="py-3 px-4 w-16 text-center">Rank</th>
-              <th className="py-3 px-4">{tab === 'colleges' ? 'Engineering Institution' : 'Developer'}</th>
-              <th className="py-3 px-4">{tab === 'colleges' ? 'Active Students' : 'College'}</th>
-              <th className="py-3 px-4">{tab === 'colleges' ? 'Problems Solved' : 'Daily Streak'}</th>
-              <th className="py-3 px-4 text-right">{tab === 'colleges' ? 'Guild Score' : 'Reputation'}</th>
+              <th className="py-3 px-4">
+                {tab === 'colleges' ? 'Engineering Institution' : tab === 'groups' ? 'Practice Circle / Guild' : 'Developer'}
+              </th>
+              <th className="py-3 px-4">
+                {tab === 'colleges' ? 'Active Students' : tab === 'groups' ? 'Group Type' : 'College'}
+              </th>
+              <th className="py-3 px-4">
+                {tab === 'colleges' ? 'Problems Solved' : tab === 'groups' ? 'Active Members' : 'Daily Streak'}
+              </th>
+              <th className="py-3 px-4 text-right">
+                {tab === 'colleges' ? 'Guild Score' : tab === 'groups' ? 'Circle Points' : 'Reputation'}
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {tab === 'colleges'
-              ? collegesData.map((col) => (
-                  <tr key={col.rank} className="hover:bg-neutral-50/70 transition-colors">
-                    <td className="py-3.5 px-4 text-center font-bold font-mono text-neutral-700">
-                      #{col.rank}
+          <tbody className="divide-y divide-neutral-100 dark:divide-[#333333]">
+            {tab === 'colleges' ? (
+              collegesData.map((col) => (
+                <tr key={col.rank} className="hover:bg-neutral-50/70 dark:hover:bg-[#303030] transition-colors">
+                  <td className="py-3.5 px-4 text-center font-bold font-mono text-neutral-700 dark:text-neutral-300">
+                    #{col.rank}
+                  </td>
+                  <td className="py-3.5 px-4 font-semibold text-neutral-900 dark:text-[#eff1f6]">
+                    {col.college}
+                  </td>
+                  <td className="py-3.5 px-4 text-neutral-600 dark:text-neutral-400 font-mono text-xs">
+                    {col.activeStudents} Contributors
+                  </td>
+                  <td className="py-3.5 px-4 text-neutral-600 dark:text-neutral-400 font-mono text-xs">
+                    {col.problemsSolved}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-bold text-neutral-900 dark:text-[#eff1f6] font-mono">
+                    {col.points.toLocaleString()} pts
+                  </td>
+                </tr>
+              ))
+            ) : tab === 'groups' ? (
+              groupsData.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-neutral-500 dark:text-neutral-400 text-xs">
+                    No groups registered yet.{' '}
+                    <Link href="/groups" className="text-brand-600 dark:text-brand-400 font-bold underline ml-1">
+                      Create a Friends Group or Campus Guild
+                    </Link>
+                  </td>
+                </tr>
+              ) : (
+                groupsData.map((grp) => (
+                  <tr key={grp.id} className="hover:bg-neutral-50/70 dark:hover:bg-[#303030] transition-colors">
+                    <td className="py-3.5 px-4 text-center font-bold font-mono text-neutral-700 dark:text-neutral-300">
+                      #{grp.rank}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-neutral-900">
-                      {col.college}
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-neutral-900 dark:text-[#eff1f6] flex items-center gap-2">
+                        <span>{grp.name}</span>
+                      </div>
+                      <div className="text-xs text-neutral-400 dark:text-neutral-500">Leader: {grp.leaderName}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-neutral-600 font-mono text-xs">
-                      {col.activeStudents} Contributors
+                    <td className="py-3.5 px-4">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-bold uppercase ${
+                          grp.type === 'friends'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-[#00b8a3]/15 dark:text-[#00b8a3] dark:border-[#00b8a3]/30'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-[#6366f1]/15 dark:text-[#818cf8] dark:border-[#6366f1]/30'
+                        }`}
+                      >
+                        {grp.type === 'friends' ? 'Friends Group' : 'Official Guild'}
+                      </Badge>
                     </td>
-                    <td className="py-3.5 px-4 text-neutral-600 font-mono text-xs">
-                      {col.problemsSolved}
+                    <td className="py-3.5 px-4 text-neutral-600 dark:text-neutral-400 font-mono text-xs">
+                      {grp.membersCount} {grp.membersCount === 1 ? 'Coder' : 'Coders'}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-neutral-900 font-mono">
-                      {col.points.toLocaleString()} pts
+                    <td className="py-3.5 px-4 text-right font-bold text-brand-600 dark:text-brand-400 font-mono">
+                      {grp.reputation.toLocaleString()} pts
                     </td>
                   </tr>
                 ))
-              : usersData.map((usr) => (
-                  <tr
-                    key={usr.rank}
-                    className={`hover:bg-neutral-50/70 transition-colors ${
-                      usr.isCurrentUser ? 'bg-brand-50/40 font-semibold' : ''
-                    }`}
-                  >
-                    <td className="py-3.5 px-4 text-center font-bold font-mono text-neutral-700">
-                      #{usr.rank}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-neutral-900 flex items-center gap-2">
-                        <span>{usr.name}</span>
-                        {usr.isCurrentUser && (
-                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-brand-600 text-white">
-                            You
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-neutral-400 font-mono">@{usr.username}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-neutral-600 text-xs">
-                      {usr.college}
-                    </td>
-                    <td className="py-3.5 px-4 text-amber-600 font-mono text-xs font-semibold">
-                      🔥 {usr.streak} {usr.streak === 1 ? 'Day' : 'Days'}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-brand-600 font-mono">
-                      {usr.reputation.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+              )
+            ) : (
+              usersData.map((usr) => (
+                <tr
+                  key={usr.rank}
+                  className={`hover:bg-neutral-50/70 dark:hover:bg-[#303030] transition-colors ${
+                    usr.isCurrentUser ? 'bg-brand-50/40 dark:bg-brand-950/20 font-semibold' : ''
+                  }`}
+                >
+                  <td className="py-3.5 px-4 text-center font-bold font-mono text-neutral-700 dark:text-neutral-300">
+                    #{usr.rank}
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <div className="font-semibold text-neutral-900 dark:text-[#eff1f6] flex items-center gap-2">
+                      <span>{usr.name}</span>
+                      {usr.isCurrentUser && (
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-brand-600 text-white">
+                          You
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-neutral-400 dark:text-neutral-500 font-mono">@{usr.username}</div>
+                  </td>
+                  <td className="py-3.5 px-4 text-neutral-600 dark:text-neutral-400 text-xs">
+                    {usr.college}
+                  </td>
+                  <td className="py-3.5 px-4 text-amber-600 dark:text-amber-400 font-mono text-xs font-semibold">
+                    🔥 {usr.streak} {usr.streak === 1 ? 'Day' : 'Days'}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-bold text-brand-600 dark:text-brand-400 font-mono">
+                    {usr.reputation.toLocaleString()}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </Card>
