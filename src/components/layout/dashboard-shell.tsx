@@ -39,7 +39,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
   return (
     <SidebarProvider user={user} onSignOut={handleSignOut}>
       <Topbar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-neutral-50 dark:bg-[#1a1a1a] transition-colors">
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>

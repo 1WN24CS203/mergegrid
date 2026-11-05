@@ -78,7 +78,7 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
 
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed, mobileOpen, setMobileOpen }}>
-      <div className="flex h-screen overflow-hidden bg-neutral-50">
+      <div className="flex h-screen overflow-hidden bg-neutral-50 dark:bg-[#1a1a1a]">
         {/* Mobile overlay */}
         {mobileOpen && (
           <div
@@ -101,7 +101,7 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
         >
           {/* Logo */}
           <div className={cn(
-            'flex items-center h-14 border-b border-neutral-100 shrink-0',
+            'flex items-center h-14 border-b border-neutral-100 dark:border-[#2e2e2e] shrink-0',
             collapsed ? 'justify-center px-2' : 'px-4'
           )}>
             <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
@@ -113,7 +113,7 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
                 />
               </div>
               {!collapsed && (
-                <span className="text-base font-bold text-neutral-900 tracking-tight">
+                <span className="text-base font-bold text-neutral-900 dark:text-[#eff1f6] tracking-tight">
                   Merge<span className="text-brand-600">Grid</span>
                 </span>
               )}
@@ -122,7 +122,7 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
             {/* Mobile close */}
             <button
               onClick={() => setMobileOpen(false)}
-              className="ml-auto lg:hidden text-neutral-400 hover:text-neutral-600 cursor-pointer"
+              className="ml-auto lg:hidden text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -145,7 +145,7 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
           </nav>
 
           {/* Bottom Nav */}
-          <div className="border-t border-neutral-100 py-3 px-2.5">
+          <div className="border-t border-neutral-100 dark:border-[#2e2e2e] py-3 px-2.5">
             <div className="space-y-0.5">
               {bottomItems.map((item) => (
                 <NavItem
@@ -163,26 +163,26 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
           {/* User section */}
           {user && (
             <div className={cn(
-              'border-t border-neutral-100 p-2.5',
+              'border-t border-neutral-100 dark:border-[#2e2e2e] p-2.5',
               collapsed ? 'flex justify-center' : ''
             )}>
               {collapsed ? (
                 <Avatar name={user.display_name} src={user.avatar_url} size="sm" />
               ) : (
-                <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-neutral-50 transition-colors">
+                <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-[#282828] transition-colors">
                   <Avatar name={user.display_name} src={user.avatar_url} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-neutral-900 truncate">
+                    <p className="text-sm font-medium text-neutral-900 dark:text-[#eff1f6] truncate">
                       {user.display_name}
                     </p>
-                    <p className="text-xs text-neutral-500 truncate">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                       @{user.username}
                     </p>
                   </div>
                   {onSignOut && (
                     <button
                       onClick={onSignOut}
-                      className="text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer"
+                      className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors cursor-pointer"
                       title="Sign out"
                     >
                       <LogOut className="w-4 h-4" />
@@ -194,12 +194,12 @@ export function SidebarProvider({ children, user, onSignOut }: SidebarProviderPr
           )}
 
           {/* Collapse toggle (desktop only) */}
-          <div className="hidden lg:flex border-t border-neutral-100 p-2.5">
+          <div className="hidden lg:flex border-t border-neutral-100 dark:border-[#2e2e2e] p-2.5">
             <button
               onClick={() => setCollapsed(!collapsed)}
               className={cn(
                 'flex items-center justify-center w-full h-8 rounded-lg',
-                'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
+                'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-[#282828]',
                 'transition-colors cursor-pointer'
               )}
             >

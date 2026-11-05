@@ -874,7 +874,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
               }}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
                 selectedCompany === comp
-                  ? 'bg-neutral-900 text-white dark:bg-[#eff1f6] dark:text-neutral-900 font-bold shadow-xs'
+                  ? 'bg-brand-600 text-white font-semibold shadow-xs'
                   : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-[#333333] dark:hover:bg-[#3a3a3a] dark:text-neutral-300'
               }`}
             >
@@ -890,7 +890,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             onClick={() => setTimeframe('30days')}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               timeframe === '30days'
-                ? 'bg-neutral-900 text-white dark:bg-[#eff1f6] dark:text-neutral-900 font-bold shadow-xs'
+                ? 'bg-brand-600 text-white font-semibold shadow-xs'
                 : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-[#333333] dark:text-neutral-300'
             }`}
           >
@@ -901,7 +901,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             onClick={() => setTimeframe('all')}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               timeframe === 'all'
-                ? 'bg-neutral-900 text-white dark:bg-[#eff1f6] dark:text-neutral-900 font-bold shadow-xs'
+                ? 'bg-brand-600 text-white font-semibold shadow-xs'
                 : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-[#333333] dark:text-neutral-300'
             }`}
           >
@@ -1283,7 +1283,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                     onClick={() => setCurrentPage(pageNum)}
                     className={`h-8 w-8 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                       safeCurrentPage === pageNum
-                        ? 'bg-neutral-900 text-white dark:bg-[#3b82f6] dark:text-white shadow-xs'
+                        ? 'bg-brand-600 text-white shadow-xs'
                         : 'bg-white border border-neutral-200 dark:bg-[#282828] dark:border-[#383838] text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#323232]'
                     }`}
                   >
@@ -1319,23 +1319,23 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
       {/* FULL IN-BROWSER CODE SPACE WORKBENCH */}
       {activeProblem && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full border border-neutral-200 overflow-hidden flex flex-col h-[94vh] animate-scale-in">
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-2xl max-w-6xl w-full border border-neutral-200 dark:border-[#383838] overflow-hidden flex flex-col h-[94vh] animate-scale-in">
             {/* Code Space Top Header */}
-            <div className="px-3 sm:px-5 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-900 text-white flex items-center justify-between shrink-0 gap-2">
+            <div className="px-3 sm:px-5 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#202020] text-neutral-900 dark:text-white flex items-center justify-between shrink-0 gap-2">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <span className="text-xs px-2 sm:px-2.5 py-0.5 rounded font-mono font-bold bg-neutral-800 text-brand-400 border border-neutral-700 shrink-0">
+                <span className="text-xs px-2 sm:px-2.5 py-0.5 rounded font-mono font-bold bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-brand-400 border border-neutral-300 dark:border-neutral-700 shrink-0">
                   {activeProblem.platformId}
                 </span>
-                <h3 className="text-sm sm:text-base font-bold text-white truncate max-w-[150px] sm:max-w-xs md:max-w-md">
+                <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white truncate max-w-[150px] sm:max-w-xs md:max-w-md">
                   {activeProblem.title}
                 </h3>
                 <span
                   className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded shrink-0 ${
                     activeProblem.difficulty === 'Easy'
-                      ? 'bg-emerald-500/20 text-emerald-400'
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                       : activeProblem.difficulty === 'Medium'
-                      ? 'bg-amber-500/20 text-amber-400'
-                      : 'bg-rose-500/20 text-rose-400'
+                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                      : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
                   }`}
                 >
                   {activeProblem.difficulty}
@@ -1347,7 +1347,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                   href={activeProblem.platformUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="hidden sm:flex text-xs text-neutral-300 hover:text-white items-center gap-1.5 transition-colors bg-neutral-800 px-2.5 py-1 rounded border border-neutral-700"
+                  className="hidden sm:flex text-xs text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white items-center gap-1.5 transition-colors bg-white hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 px-2.5 py-1 rounded border border-neutral-200 dark:border-neutral-700"
                   title="Open on official platform"
                 >
                   <span>{activeProblem.platform}</span>
@@ -1355,7 +1355,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 </a>
                 <button
                   onClick={() => setActiveProblem(null)}
-                  className="p-1 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="p-1 rounded-lg text-neutral-400 hover:text-neutral-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1363,14 +1363,14 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
             </div>
 
             {/* Mobile Panel Switcher (Visible on mobile/tablet, hidden on lg desktop) */}
-            <div className="lg:hidden flex border-b border-neutral-800 bg-neutral-900 text-xs font-semibold shrink-0">
+            <div className="lg:hidden flex border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 text-xs font-semibold shrink-0">
               <button
                 type="button"
                 onClick={() => setMobileTab('description')}
                 className={`flex-1 py-2.5 text-center transition-colors cursor-pointer ${
                   mobileTab === 'description'
-                    ? 'bg-neutral-800 text-brand-400 border-b-2 border-brand-500 font-bold'
-                    : 'text-neutral-400 hover:text-white'
+                    ? 'bg-white text-brand-600 dark:bg-neutral-800 dark:text-brand-400 border-b-2 border-brand-500 font-bold'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                 }`}
               >
                 Problem Statement
@@ -1380,8 +1380,8 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 onClick={() => setMobileTab('editor')}
                 className={`flex-1 py-2.5 text-center transition-colors cursor-pointer ${
                   mobileTab === 'editor'
-                    ? 'bg-neutral-800 text-brand-400 border-b-2 border-brand-500 font-bold'
-                    : 'text-neutral-400 hover:text-white'
+                    ? 'bg-white text-brand-600 dark:bg-neutral-800 dark:text-brand-400 border-b-2 border-brand-500 font-bold'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                 }`}
               >
                 Code Space &amp; Runner
@@ -1460,15 +1460,15 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
               </div>
 
               {/* Right Panel: Code Space Editor & Execution Console */}
-              <div className={`w-full lg:w-7/12 flex flex-col min-h-0 bg-[#1a1a1a] ${mobileTab === 'editor' ? 'flex flex-1' : 'hidden lg:flex'}`}>
+              <div className={`w-full lg:w-7/12 flex flex-col min-h-0 bg-white dark:bg-[#1a1a1a] ${mobileTab === 'editor' ? 'flex flex-1' : 'hidden lg:flex'}`}>
                 {/* Editor Top Bar */}
-                <div className="px-4 py-2 bg-[#222222] border-b border-neutral-800 flex items-center justify-between text-xs shrink-0">
+                <div className="px-4 py-2 bg-neutral-50 dark:bg-[#222222] border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-xs shrink-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-neutral-400 font-medium">Language:</span>
+                    <span className="text-neutral-600 dark:text-neutral-400 font-medium">Language:</span>
                     <select
                       value={selectedLang}
                       onChange={(e) => setSelectedLang(e.target.value as SupportedLanguage)}
-                      className="bg-[#21262d] text-white border border-neutral-700 rounded-md px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
+                      className="bg-white dark:bg-[#21262d] text-neutral-800 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-md px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
                     >
                       <option value="c">C (C17 / GCC)</option>
                       <option value="cpp">C++ 20 (g++)</option>
@@ -1481,17 +1481,17 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-3 text-neutral-400">
+                  <div className="flex items-center gap-3 text-neutral-500 dark:text-neutral-400">
                     <button
                       onClick={copyCodeToClipboard}
-                      className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                      className="flex items-center gap-1 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
                       title="Copy code to clipboard"
                     >
                       <Copy className="w-3.5 h-3.5" /> Copy Code
                     </button>
                     <button
                       onClick={() => setUserCode(getProblemStarterCode(activeProblem, selectedLang))}
-                      className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                      className="flex items-center gap-1 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
                       title="Reset to clean initial code strip"
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> Reset Template
@@ -1505,31 +1505,31 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                     value={userCode}
                     onChange={(e) => setUserCode(e.target.value)}
                     spellCheck={false}
-                    className="w-full h-full bg-[#0d1117] text-neutral-100 p-4 font-mono text-xs leading-relaxed outline-none resize-none selection:bg-brand-500/40"
+                    className="w-full h-full bg-[#fafbfc] dark:bg-[#0d1117] text-neutral-900 dark:text-neutral-100 p-4 font-mono text-xs leading-relaxed outline-none resize-none selection:bg-brand-500/20 dark:selection:bg-brand-500/40"
                     placeholder="Write your solution here..."
                   />
                 </div>
 
                 {/* Execution Output Console */}
                 {runOutput && (
-                  <div className="border-t border-neutral-800 bg-[#161b22] p-4 text-xs font-mono shrink-0 max-h-72 overflow-y-auto space-y-3">
+                  <div className="border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#161b22] p-4 text-xs font-mono shrink-0 max-h-72 overflow-y-auto space-y-3">
                     {runOutput.status === 'success' ? (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> {runOutput.casesPassed}
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> {runOutput.casesPassed}
                           </span>
-                          <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
+                          <div className="flex items-center gap-3 text-neutral-500 dark:text-neutral-400 text-[11px]">
                             <span>
-                              Runtime: <strong className="text-neutral-200">{runOutput.runtime}</strong>
+                              Runtime: <strong className="text-neutral-800 dark:text-neutral-200">{runOutput.runtime}</strong>
                             </span>
                             <span>
-                              Memory: <strong className="text-neutral-200">{runOutput.memory}</strong>
+                              Memory: <strong className="text-neutral-800 dark:text-neutral-200">{runOutput.memory}</strong>
                             </span>
                           </div>
                         </div>
                         {runOutput.message && (
-                          <p className="text-neutral-300 text-[11px] leading-relaxed">
+                          <p className="text-neutral-700 dark:text-neutral-300 text-[11px] leading-relaxed">
                             {runOutput.message}
                           </p>
                         )}
@@ -1538,14 +1538,14 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                       /* Rich Error Details irrespective of language */
                       <div className="space-y-3">
                         {/* Error Header & Location */}
-                        <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+                        <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1">
                               <AlertCircle className="w-3.5 h-3.5" />
                               {runOutput.errorDetails?.type || 'Error'}
                             </span>
                             {runOutput.errorDetails?.line && (
-                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-800 text-neutral-300 border border-neutral-700">
+                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700">
                                 Line {runOutput.errorDetails.line}
                                 {runOutput.errorDetails.column ? `, Col ${runOutput.errorDetails.column}` : ''}
                               </span>
@@ -1553,7 +1553,7 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                           </div>
                           <button
                             onClick={() => setRunOutput(null)}
-                            className="text-neutral-500 hover:text-neutral-300 text-xs px-1 cursor-pointer"
+                            className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 text-xs px-1 cursor-pointer"
                             title="Dismiss Output"
                           >
                             ✕
@@ -1561,23 +1561,23 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                         </div>
 
                         {/* Raw Compiler / Runtime Message */}
-                        <div className="text-rose-400 font-semibold text-xs leading-relaxed flex items-start gap-1.5">
+                        <div className="text-rose-600 dark:text-rose-400 font-semibold text-xs leading-relaxed flex items-start gap-1.5">
                           <span className="select-none">▸</span>
                           <span>{runOutput.errorDetails?.message}</span>
                         </div>
 
                         {/* Offending Code Snippet with Pointer */}
                         {runOutput.errorDetails?.offendingLine && (
-                          <div className="bg-[#0d1117] rounded-lg p-3 border border-neutral-800 overflow-x-auto">
-                            <div className="text-neutral-500 text-[11px] mb-1">Source context:</div>
-                            <div className="text-neutral-200 whitespace-pre">
-                              <span className="text-neutral-500 select-none mr-2">
+                          <div className="bg-white dark:bg-[#0d1117] rounded-lg p-3 border border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+                            <div className="text-neutral-500 dark:text-neutral-400 text-[11px] mb-1">Source context:</div>
+                            <div className="text-neutral-800 dark:text-neutral-200 whitespace-pre">
+                              <span className="text-neutral-400 dark:text-neutral-500 select-none mr-2">
                                 {runOutput.errorDetails.line ? `${runOutput.errorDetails.line} | ` : '> '}
                               </span>
                               {runOutput.errorDetails.offendingLine}
                             </div>
                             {runOutput.errorDetails.pointer && (
-                              <div className="text-rose-400 font-bold whitespace-pre">
+                              <div className="text-rose-600 dark:text-rose-400 font-bold whitespace-pre">
                                 <span className="text-transparent select-none mr-2">
                                   {runOutput.errorDetails.line ? `${runOutput.errorDetails.line} | ` : '> '}
                                 </span>
@@ -1589,11 +1589,11 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
                         {/* Clear Plain-English Explanation */}
                         {runOutput.errorDetails?.explanation && (
-                          <div className="bg-neutral-800/60 rounded-lg p-2.5 border border-neutral-700/60 text-[11px] space-y-1">
-                            <div className="text-amber-400 font-semibold flex items-center gap-1">
+                          <div className="bg-amber-50 dark:bg-neutral-800/60 rounded-lg p-2.5 border border-amber-200/80 dark:border-neutral-700/60 text-[11px] space-y-1">
+                            <div className="text-amber-800 dark:text-amber-400 font-semibold flex items-center gap-1">
                               <Info className="w-3.5 h-3.5" /> Why this occurred:
                             </div>
-                            <p className="text-neutral-300 leading-relaxed pl-4 font-sans text-xs">
+                            <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed pl-4 font-sans text-xs">
                               {runOutput.errorDetails.explanation}
                             </p>
                           </div>
@@ -1601,11 +1601,11 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
                         {/* Actionable Fix Suggestion */}
                         {runOutput.errorDetails?.suggestion && (
-                          <div className="bg-brand-950/40 rounded-lg p-2.5 border border-brand-800/40 text-[11px] space-y-1">
-                            <div className="text-brand-300 font-semibold flex items-center gap-1">
+                          <div className="bg-brand-50 dark:bg-brand-950/40 rounded-lg p-2.5 border border-brand-200 dark:border-brand-800/40 text-[11px] space-y-1">
+                            <div className="text-brand-800 dark:text-brand-300 font-semibold flex items-center gap-1">
                               <Lightbulb className="w-3.5 h-3.5" /> How to fix:
                             </div>
-                            <p className="text-neutral-200 leading-relaxed pl-4 font-sans text-xs">
+                            <p className="text-neutral-800 dark:text-neutral-200 leading-relaxed pl-4 font-sans text-xs">
                               {runOutput.errorDetails.suggestion}
                             </p>
                           </div>
@@ -1613,19 +1613,19 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
 
                         {/* Failed Test Case Comparison (if Wrong Answer) */}
                         {runOutput.errorDetails?.testCase && (
-                          <div className="bg-[#0d1117] rounded-lg p-3 border border-neutral-800 text-[11px] space-y-1.5">
-                            <div className="text-neutral-400 font-bold text-xs uppercase tracking-wider mb-1">
+                          <div className="bg-white dark:bg-[#0d1117] rounded-lg p-3 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-1.5">
+                            <div className="text-neutral-500 dark:text-neutral-400 font-bold text-xs uppercase tracking-wider mb-1">
                               Test Case Evaluation
                             </div>
-                            <div className="text-neutral-300">
+                            <div className="text-neutral-700 dark:text-neutral-300">
                               <span className="text-neutral-500">Input: </span>
-                              <span className="text-neutral-200">{runOutput.errorDetails.testCase.input}</span>
+                              <span className="text-neutral-800 dark:text-neutral-200">{runOutput.errorDetails.testCase.input}</span>
                             </div>
-                            <div className="text-emerald-400">
+                            <div className="text-emerald-600 dark:text-emerald-400">
                               <span className="text-neutral-500">Expected: </span>
                               <span>{runOutput.errorDetails.testCase.expected}</span>
                             </div>
-                            <div className="text-rose-400">
+                            <div className="text-rose-600 dark:text-rose-400">
                               <span className="text-neutral-500">Actual Output: </span>
                               <span>{runOutput.errorDetails.testCase.actual}</span>
                             </div>
@@ -1637,9 +1637,9 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                 )}
 
                 {/* Code Space Action Buttons */}
-                <div className="p-3 bg-[#161b22] border-t border-neutral-800 flex items-center justify-between shrink-0 flex-wrap gap-2">
-                  <div className="flex items-center gap-2 text-neutral-400 text-xs font-mono">
-                    <Terminal className="w-3.5 h-3.5 text-brand-400" />
+                <div className="p-3 bg-neutral-50 dark:bg-[#161b22] border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0 flex-wrap gap-2">
+                  <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400 text-xs font-mono">
+                    <Terminal className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
                     <span className="hidden sm:inline">Sandboxed Judge</span>
                   </div>
 
@@ -1650,8 +1650,8 @@ function getProblemStarterCode(problem: Problem, lang: SupportedLanguage): strin
                       variant="outline"
                       onClick={handleRunCode}
                       loading={isRunning}
-                      className="bg-[#21262d] hover:bg-[#30363d] text-neutral-200 border-neutral-700"
-                      icon={<Play className="w-3.5 h-3.5 text-amber-400" />}
+                      className="bg-white dark:bg-[#21262d] hover:bg-neutral-100 dark:hover:bg-[#303030] text-neutral-800 dark:text-neutral-200 border-neutral-300 dark:border-neutral-700 shadow-xs"
+                      icon={<Play className="w-3.5 h-3.5 text-amber-500" />}
                     >
                       Run Tests
                     </Button>
